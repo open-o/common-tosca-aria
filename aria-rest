@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+HERE=$(dirname "$(readlink -f "$0")")
+ARIA_SRC="$HERE/src/aria"
+TOSCA_SRC="$HERE/src/tosca"
+CLOUDIFY_SRC="$HERE/src/cloudify"
+
+PYTHONPATH="$ARIA_SRC:$TOSCA_SRC:$CLOUDIFY_SRC:$PYTHONPATH" \
+python -m aria.tools.rest --root="$HERE/web" --path="$HERE/blueprints" "$@"

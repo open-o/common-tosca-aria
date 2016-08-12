@@ -1,0 +1,16 @@
+*.pyc
+**/*.egg-info/
+
+env/
+docs/
+out/
+
+.tox/
+.coverage
+
+*.geany
+*.csv
+
+.DS_Store
+
+.idea/

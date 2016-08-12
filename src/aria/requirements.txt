@@ -1,0 +1,7 @@
+functools32==3.2.3-2
+ruamel.yaml==0.11.14
+clint==0.5.1
+Jinja2==2.8
+requests==2.10.0
+CacheControl[filecache]==0.11.6
+shortuuid==0.4.3
