@@ -15,7 +15,7 @@
 #
 
 #
-# NoteTemplate, RelationshipTemplate
+# NodeTemplate, RelationshipTemplate
 #
 
 def get_default_raw_from_copy(presentation, field_name):

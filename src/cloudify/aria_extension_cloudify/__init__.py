@@ -14,21 +14,28 @@
 # under the License.
 #
 
+from .v1_0 import CloudifyPresenter1_0
+from .v1_1 import CloudifyPresenter1_1
+from .v1_2 import CloudifyPresenter1_2
+from .v1_3 import CloudifyPresenter1_3
+from .classic_plan import ClassicPlan
 from aria import DSL_SPECIFICATION_PACKAGES
 from aria.presentation import PRESENTER_CLASSES
-from .v1_3 import CloudifyPresenter1_3
 
 def install_aria_extension():
-    # v1.3 presenter
-    PRESENTER_CLASSES.append(CloudifyPresenter1_3)
+    global PRESENTER_CLASSES
+    PRESENTER_CLASSES += (CloudifyPresenter1_0, CloudifyPresenter1_1, CloudifyPresenter1_2, CloudifyPresenter1_3)
     
     # DSL specification
     DSL_SPECIFICATION_PACKAGES.append('aria_extension_cloudify')
 
 MODULES = (
+    'v1_0',
+    'v1_1',
     'v1_2',
     'v1_3')
 
 __all__ = (
     'MODULES',
-    'install_aria_extension')
+    'install_aria_extension',
+    'ClassicPlan')

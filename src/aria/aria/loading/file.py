@@ -16,9 +16,10 @@
 
 from .loader import Loader
 from .exceptions import LoaderError, DocumentNotFoundError
+from ..utils import StrictList
 import codecs, os.path
 
-FILE_LOADER_PATHS = []
+FILE_LOADER_SEARCH_PATHS = StrictList(value_class=basestring)
 
 class FileTextLoader(Loader):
     """
@@ -27,27 +28,47 @@ class FileTextLoader(Loader):
     Extracts a text document from a file. The default encoding is UTF-8, but other supported
     encoding can be specified instead.
     
-    Supports a list of base paths that are tried in order if the file cannot be found.
+    Supports a list of search paths that are tried in order if the file cannot be found.
+    They can be specified in the context, as well as globally in :code:`FILE_LOADER_SEARCH_PATHS`. 
+    
+    If :code:`origin_location` is provided, a base path will be extracted from it and prepended
+    to the search paths.
     """
 
-    def __init__(self, source, path, paths=[], encoding='utf-8'):
-        self.source = source
-        self.location = path
-        self.paths = FILE_LOADER_PATHS + paths
+    def __init__(self, context, location, origin_location, encoding='utf-8'):
+        self.context = context
+        self.location = location
         self.encoding = encoding
+        self.path = location.as_file
+        self.search_paths = StrictList(value_class=basestring) 
         self.file = None
+        
+        def add_search_path(search_path):
+            if search_path not in self.search_paths:
+                self.search_paths.append(search_path)
+
+        def add_search_paths(search_paths):
+            for search_path in search_paths:
+                add_search_path(search_path)
+
+        if origin_location is not None:
+            origin_search_path = origin_location.search_path
+            if origin_search_path is not None:
+                add_search_path(origin_search_path)
+        
+        add_search_paths(context.search_paths)
+        add_search_paths(FILE_LOADER_SEARCH_PATHS)
     
     def open(self):
         try:
-            self.file = codecs.open(self.location, mode='r', encoding=self.encoding, buffering=1)
+            self._open(os.path.abspath(self.path))
         except IOError as e:
             if e.errno == 2:
                 # Not found, so try in paths
-                for p in self.paths:
-                    path = os.path.join(p, self.location)
+                for p in self.search_paths:
+                    path = os.path.join(p, self.path)
                     try:
-                        self.file = codecs.open(path, mode='r', encoding=self.encoding, buffering=1)
-                        self.location = path
+                        self._open(path)
                         return
                     except IOError as e:
                         if e.errno != 2:
@@ -76,3 +97,7 @@ class FileTextLoader(Loader):
             except Exception as e:
                 raise LoaderError('file error %s' % self.location, cause=e)
         return None
+
+    def _open(self, path):
+        self.file = codecs.open(path, mode='r', encoding=self.encoding, buffering=1)
+        self.location.uri = path

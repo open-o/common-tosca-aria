@@ -12,7 +12,7 @@ ARIA adheres strictly and meticulously to the
 [TOSCA Simple Profile v1.0 specification](http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/csprd02/TOSCA-Simple-Profile-YAML-v1.0-csprd02.html),
 providing state-of-the-art validation at seven different levels:
 
-0. Platform errors. E.g. network, hardware, of even an internal bug in ARIA (let us know,
+0. Platform errors. E.g. network, hardware, or even an internal bug in ARIA (let us know,
    please!).
 1. Syntax and format errors. E.g. non-compliant YAML, XML, JSON.
 2. Field validation. E.g. assigning a string where an integer is expected, using a list
@@ -37,22 +37,38 @@ documentation.
 Quick Start
 -----------
 
-You need Python v2.7. Use a [virtualenv](https://virtualenv.pypa.io/en/stable/):
+You need Python v2.7. Python v3 is not currently supported. Use a [virtualenv](https://virtualenv.pypa.io/en/stable/):
 
 	pip install virtualenv
 	virtualenv env
 	. env/bin/activate
-	make aria-requirements
+	pip install .
 
 Now create a deployment plan from a TOSCA blueprint:
 
-	./aria blueprints/tosca/node-cellar.yaml
+	aria blueprints/tosca/node-cellar.yaml
+	
+You can also get it in JSON format:
 
+	aria blueprints/tosca/node-cellar.yaml --json
 
-`aria.parsing`
----------------
+Or get an overview of the relationship graph:
 
-The ARIA parser's generates a representation of TOSCA profiles in Python, such that they
+	aria blueprints/tosca/node-cellar.yaml --graph
+
+You can provide inputs as JSON, overriding default values provided in the blueprint
+
+	aria blueprints/tosca/node-cellar.yaml --inputs='{"openstack_credential": {"user": "username"}}'
+
+Instead of providing them explicitly, you can also provide them in a file or URL, in either
+JSON or YAML. If you do so, the value must end in ".json" or ".yaml":
+
+	aria blueprints/tosca/node-cellar.yaml --inputs=blueprints/tosca/inputs.yaml
+
+Architecture
+------------
+
+The ARIA parser generates a representation of TOSCA profiles in Python, such that they
 can be validated, consumed, or manipulated.
 
 Importantly, it keeps the original TOSCA data intact, such that modifications can be
@@ -63,7 +79,7 @@ It is furthermore possible to use ARIA in order to generate a complete TOSCA pro
 programmatically, in Python, and then write it to files. The same technique can be
 used to convert from one DSL (parse it) to another (write it).
 
-The parser works in three phases, represented by packages and classes in the API:
+The parser works in five phases, represented by packages and classes in the API:
 
 * `aria.loading`: Loaders are used to read the TOSCA data, usually as text.
   For example UriTextLoader will load text from URIs (including files).
@@ -75,6 +91,15 @@ The parser works in three phases, represented by packages and classes in the API
   including utilities for validation, querying, etc. Note that presenters are
   _wrappers_: the agnostic raw data is always maintained intact, and can always be
   accessed directly or written back to files.
+* `aria.deployment.template`: Here the topology is normalized into a coherent
+  structure of node templates, requirements, and capabilities. Types are inherited
+  and properties are assigned. The deployment template is a _new_ structure,
+  which is not mapped to the YAML. In fact, it is possible to generate the template
+  programmatically, or from a DSL parser other than TOSCA.
+* `aria.deployment.plan`: The deployment plan is an instantiated deployment
+  templates. Node templates turn into node instances (with unique IDs), and
+  requirements are satisfied by matching them to capabilities. This is where level
+  5 validation errors are detected (see above).
 
 The term "agnostic raw data" (ARD?) appears often in the documentation. It denotes
 data structures comprising _only_ Python dicts, lists, and primitives, such that
@@ -102,14 +127,17 @@ phases:
 * `yaml`: emits a combined, validated, and normalized YAML representation of the
    blueprint.
 * `presentation`: emits a colorized textual representation of the Python presentation
-   classes wrapping the blueprint. 
+   classes wrapping the blueprint.
 * `template`: emits a colorized textual representation of the complete topology
    template derived from the validated blueprint. This includes all the node templates,
    with their requirements satisfied at the level of relating to other node templates.
-* `plan`: emits a colorized textual representation of a deployment plan instantiated
-   from the deployment template. Here the node templates are each used to create one or
-   more nodes, with the appropriate relationships between them. Note that every time you
-   run this consumer, you will get a different set of node IDs.
+* `types`: emits a colorized textual representation of the the template's type
+   hierarchies: for nodes, capabilities, and relationships.
+* `plan`: **this is the default consumer**; emits a colorized textual representation of
+   a deployment plan instantiated from the deployment template. Here the node templates
+   are each used to create one or more nodes, with the appropriate relationships between
+   them. Note that every time you run this consumer, you will get a different set of node
+   IDs.
 
 ### Generator (extension)
 
@@ -135,8 +163,9 @@ The tool loads YAML files and runs consumers on them. It can be useful for quick
 validating a blueprint.
 
 If other consumers are in the Python path, it can run them, too: it can thus serve as
-a useful entry point for complex TOSCA-based tools, such as orchestractors, graphical
-representers, etc.
+a useful entry point for complex TOSCA-based tools, such as orchestrators, graphical
+modeling tools, etc.
+
 
 REST Tool
 ---------
@@ -148,9 +177,47 @@ wire:
 
 With the server started, you can hit a few endpoints:
 
-    curl http://localhost:8080/validate/blueprints/tosca/simple-blueprint.yaml
+    curl http://localhost:8204/openoapi/tosca/v1/plan/blueprints/tosca/node-cellar.yaml
+    
+    curl http://localhost:8204/openoapi/tosca/v1/validate/blueprints/tosca/node-cellar.yaml
 
-You will get a JSON response with a list of validation issues. You can also POST a
-blueprint over the wire:
+You will get a JSON response with a deployment plan or validation issues.
 
-    curl --data-binary @blueprints/tosca/simple-blueprint.yaml http://localhost:8080/validate/
+You can send inputs:
+
+	curl http://localhost:8204/openoapi/tosca/v1/plan/blueprints/tosca/node-cellar.yaml?inputs=%7B%22openstack_credential%22%3A%7B%22user%22%3A%22username%22%7D%7D
+
+	curl http://localhost:8204/openoapi/tosca/v1/plan/blueprints/tosca/node-cellar.yaml?inputs=blueprints/tosca/inputs.yaml
+
+You can also POST a blueprint over the wire:
+
+    curl --data-binary @blueprints/tosca/node-cellar.yaml http://localhost:8204/openoapi/tosca/v1/plan
+
+If you POST and also want to import from the filesystem, note that you must specify search
+paths when you start the server: 
+
+    aria-rest --path blueprints/tosca /another/path/to/imports
+
+
+Development
+-----------
+
+You do not want to install with `pip`, but instead work directly with the source files:
+
+	pip install virtualenv
+	virtualenv env
+	. env/bin/activate
+	make requirements
+
+You can then run the scripts in the main directory:
+
+	./aria blueprints/tosca/node-cellar.yaml plan
+    ./aria-rest
+
+To run tests:
+
+	make
+
+To build the documentation:
+
+	make docs

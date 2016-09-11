@@ -14,19 +14,61 @@
 # under the License.
 #
 
-from .. import UnimplementedFunctionalityError, classname
+from .. import AriaError, Issue
+from ..utils import print_exception
 
 class Consumer(object):
     """
-    
     Base class for ARIA consumers.
     
     Consumers provide useful functionality by consuming presentations.
-    
     """
     
     def __init__(self, context):
         self.context = context
     
     def consume(self):
-        raise UnimplementedFunctionalityError(classname(self) + '.consume')
+        pass
+    
+    def dump(self):
+        pass
+
+    def _handle_exception(self, e):
+        if hasattr(e, 'issue') and isinstance(e.issue, Issue):
+            self.context.validation.report(issue=e.issue)
+        else:
+            self.context.validation.report(exception=e)
+        if not isinstance(e, AriaError):
+            print_exception(e)
+
+class ConsumerChain(Consumer):
+    """
+    ARIA consumer chain.
+    
+    Calls consumers in order, handling exception by calling `_handle_exception` on them, 
+    and stops the chain if there are any validation issues.
+    """
+
+    def __init__(self, context, consumer_classes=None, handle_exceptions=True):
+        super(ConsumerChain, self).__init__(context)
+        self.handle_exceptions = handle_exceptions
+        self.consumers = []
+        if consumer_classes:
+            for consumer_class in consumer_classes:
+                self.append(consumer_class)
+    
+    def append(self, *consumer_classes):
+        for consumer_class in consumer_classes:
+            self.consumers.append(consumer_class(self.context))
+
+    def consume(self):
+        for consumer in self.consumers:
+            try:
+                consumer.consume()
+            except Exception as e:
+                if self.handle_exceptions:
+                    consumer._handle_exception(e)
+                else:
+                    raise e
+            if self.context.validation.has_issues:
+                break

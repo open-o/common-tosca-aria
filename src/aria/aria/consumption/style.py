@@ -14,8 +14,7 @@
 # under the License.
 #
 
-from ..utils import make_agnostic
-from clint.textui import colored, indent
+from ..utils import make_agnostic, colored, indent
 
 class Style(object):
     def __init__(self, indentation=2):

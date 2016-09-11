@@ -276,8 +276,8 @@ class Map(StrictDict):
 
         return r
 
-    def __init__(self):
-        super(Map, self).__init__(str)
+    def __init__(self, items=None):
+        super(Map, self).__init__(items, key_class=str)
 
 @total_ordering
 @dsl_specification('3.2.6', 'tosca-simple-profile-1.0')

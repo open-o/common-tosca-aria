@@ -14,7 +14,8 @@
 # under the License.
 #
 
-from .. import UnimplementedFunctionalityError, classname
+from .. import UnimplementedFunctionalityError
+from ..utils import classname
 
 class Loader(object):
     """

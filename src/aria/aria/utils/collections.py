@@ -18,14 +18,15 @@ from __future__ import absolute_import # so we can import standard 'collections'
 
 from collections import OrderedDict
 from copy import deepcopy
-import json
 
 class ReadOnlyList(list):
     """
-    A read-only list.
+    An immutable list.
     
-    After initialization it will raise TypeError exceptions if modification
+    After initialization it will raise :class:`TypeError` exceptions if modification
     is attempted.
+    
+    Note that objects stored in the list may not be immutable.
     """
     def __init__(self, *args, **kwargs):
         self.locked = False
@@ -46,6 +47,10 @@ class ReadOnlyList(list):
         if self.locked:
             raise TypeError('read-only list')
         return super(ReadOnlyList, self).__iadd__(values)
+    
+    def __deepcopy__(self, memo):
+        r = [deepcopy(v, memo) for v in self]
+        return ReadOnlyList(r)
 
     def append(self, value):
         if self.locked:
@@ -66,10 +71,12 @@ EMPTY_READ_ONLY_LIST = ReadOnlyList()
 
 class ReadOnlyDict(OrderedDict):
     """
-    A read-only ordered dict.
+    An immutable ordered dict.
     
-    After initialization it will raise TypeError exceptions if modification
+    After initialization it will raise :class:`TypeError` exceptions if modification
     is attempted.
+
+    Note that objects stored in the dict may not be immutable.
     """
     
     def __init__(self, *args, **kwargs):
@@ -86,16 +93,24 @@ class ReadOnlyDict(OrderedDict):
         if self.locked:
             raise TypeError('read-only dict')
         return super(ReadOnlyDict, self).__delitem__(key)
+    
+    def __deepcopy__(self, memo):
+        r = [(deepcopy(k, memo), deepcopy(v, memo)) for k, v in self.iteritems()]
+        return ReadOnlyDict(r)
 
 EMPTY_READ_ONLY_DICT = ReadOnlyDict()
 
 class StrictList(list):
     """
-    A list that raises TypeError exceptions when objects of the wrong type are inserted.
+    A list that raises :class:`TypeError` exceptions when objects of the wrong type are inserted.
     """
     
-    def __init__(self, value_class, items=None, wrapper_fn=None, unwrapper_fn=None):
+    def __init__(self, items=None, value_class=None, wrapper_fn=None, unwrapper_fn=None):
         super(StrictList, self).__init__()
+        if isinstance(items, StrictList):
+            self.value_class = items.value_class
+            self.wrapper_fn = items.wrapper_fn
+            self.unwrapper_fn = items.unwrapper_fn
         self.value_class = value_class
         self.wrapper_fn = wrapper_fn
         self.unwrapper_fn = unwrapper_fn
@@ -104,16 +119,20 @@ class StrictList(list):
                 self.append(item)
     
     def _wrap(self, value):
-        if not isinstance(value, self.value_class):
-            raise TypeError('value must be a %s.%s' % (self.value_class.__module__, self.value_class.__name__))
-        if self.wrapper_fn:
+        if (self.value_class is not None) and (not isinstance(value, self.value_class)):
+            raise TypeError('value must be a "%s.%s": %s' % (self.value_class.__module__, self.value_class.__name__, repr(value)))
+        if self.wrapper_fn is not None:
             value = self.wrapper_fn(value)
+        return value
+
+    def _unwrap(self, value):
+        if self.unwrapper_fn is not None:
+            value = self.unwrapper_fn(value)
         return value
 
     def __getitem__(self, index):
         value = super(StrictList, self).__getitem__(index)
-        if self.unwrapper_fn:
-            value = self.unwrapper_fn(value)
+        value = self._unwrap(value)
         return value
         
     def __setitem__(self, index, value):
@@ -138,11 +157,16 @@ class StrictList(list):
 
 class StrictDict(OrderedDict):
     """
-    An ordered dict that raises TypeError exceptions when keys or values of the wrong type are used.
+    An ordered dict that raises :class:`TypeError` exceptions when keys or values of the wrong type are used.
     """
     
-    def __init__(self, key_class, value_class=None, items=None, wrapper_fn=None, unwrapper_fn=None):
+    def __init__(self, items=None, key_class=None, value_class=None, wrapper_fn=None, unwrapper_fn=None):
         super(StrictDict, self).__init__()
+        if isinstance(items, StrictDict):
+            self.key_class = items.key_class
+            self.value_class = items.value_class
+            self.wrapper_fn = items.wrapper_fn
+            self.unwrapper_fn = items.unwrapper_fn
         self.key_class = key_class
         self.value_class = value_class
         self.wrapper_fn = wrapper_fn
@@ -152,32 +176,21 @@ class StrictDict(OrderedDict):
                 self[k] = v
     
     def __getitem__(self, key):
-        if not isinstance(key, self.key_class):
-            raise TypeError('key must be a %s.%s' % (self.key_class.__module__, self.key_class.__name__))
+        if (self.key_class is not None) and (not isinstance(key, self.key_class)):
+            raise TypeError('key must be a "%s.%s"' % (self.key_class.__module__, self.key_class.__name__))
         value = super(StrictDict, self).__getitem__(key)
-        if self.unwrapper_fn:
+        if self.unwrapper_fn is not None:
             value = self.unwrapper_fn(value)
         return value
         
     def __setitem__(self, key, value):
-        if not isinstance(key, self.key_class):
-            raise TypeError('key must be a %s.%s' % (self.key_class.__module__, self.key_class.__name__))
-        if self.value_class is not None:
-            if not isinstance(value, self.value_class):
-                raise TypeError('value must be a %s.%s' % (self.value_class.__module__, self.value_class.__name__))
-        if self.wrapper_fn:
+        if (self.key_class is not None) and (not isinstance(key, self.key_class)):
+            raise TypeError('key must be a "%s.%s": %s' % (self.key_class.__module__, self.key_class.__name__, repr(key)))
+        if (self.value_class is not None) and (not isinstance(value, self.value_class)):
+            raise TypeError('value must be a "%s.%s": %s' % (self.value_class.__module__, self.value_class.__name__, repr(value)))
+        if self.wrapper_fn is not None:
             value = self.wrapper_fn(value)
         return super(StrictDict, self).__setitem__(key, value)
-
-class JSONValueEncoder(json.JSONEncoder):
-    def default(self, o):
-        try:
-            return iter(o)
-        except TypeError:
-            if hasattr(o, 'value'):
-                return o.value
-            return str(o)
-        return json.JSONEncoder.default(self, o)
 
 def merge(a, b, path=[], strict=False):
     """
@@ -200,74 +213,56 @@ def merge(a, b, path=[], strict=False):
             a[key] = value_b
     return a
 
-def deepclone(value):
-    """
-    Copies dicts and lists, recursively.
-    
-    If the value uses dict or list subclasses, they are used for the clone.
-    
-    Makes sure to copy over "\_locator" for all elements.
-    """
-    
-    if isinstance(value, dict):
-        r = []
-        for k, v in value.iteritems():
-            r.append((k, deepclone(v)))
-        r = value.__class__(r)
-    elif isinstance(value, list):
-        r = []
-        for v in value:
-            r.append(deepclone(v))
-        r = value.__class__(r)
-    else:
-        r = deepcopy(value)
-    
-    locator = getattr(value, '_locator', None)
-    if locator is not None:
-        try:
-            setattr(r, '_locator', locator)
-        except AttributeError:
-            pass
-        
-    return r
-
-def make_agnostic(value):
-    """
-    Converts subclasses of dict and list to standard dicts and lists, recursively.
-    """
-
-    if isinstance(value, dict) and (type(value) != dict):
-        value = dict(value)
-    elif isinstance(value, list) and (type(value) != list):
-        value = list(value)
-        
-    if isinstance(value, dict):
-        for k, v in value.iteritems():
-            value[k] = make_agnostic(v)
-    elif isinstance(value, list):
-        for i in range(len(value)):
-            value[i] = make_agnostic(value[i])
-            
-    return value
-
-def is_removable(v):
+def is_removable(container, k, v):
     return (v is None) or ((isinstance(v, dict) or isinstance(v, list)) and (len(v) == 0))
 
-def prune(value, is_removable=is_removable):
+def prune(value, is_removable_fn=is_removable):
     """
     Deletes nulls and empty lists and dicts, recursively.
     """
     
-    if isinstance(value, dict):
-        for k, v in value.iteritems():
-            if is_removable(v):
-                del value[k]
-            else:
-                prune(v)
-    elif isinstance(value, list):
+    if isinstance(value, list):
         for i in range(len(value)):
             v = value[i]
-            if is_removable(v):
+            if is_removable_fn(value, i, v):
                 del value[i]
             else:
-                prune(v)
+                prune(v, is_removable_fn)
+    elif isinstance(value, dict):
+        for k, v in value.iteritems():
+            if is_removable_fn(value, k, v):
+                del value[k]
+            else:
+                prune(v, is_removable_fn)
+
+    return value
+
+def deepcopy_with_locators(value):
+    """
+    Like :code:`deepcopy`, but also copies over locators.
+    """
+    
+    r = deepcopy(value)
+    copy_locators(r, value)
+    return r
+
+def copy_locators(target, source):
+    """
+    Copies over :code:`_locator` for all elements, recursively.
+    
+    Assumes that target and source have exactly the same list/dict structure.
+    """
+
+    locator = getattr(source, '_locator', None)
+    if locator is not None:
+        try:
+            setattr(target, '_locator', locator)
+        except AttributeError:
+            pass
+
+    if isinstance(target, list) and isinstance(source, list):
+        for i in range(len(target)):
+            copy_locators(target[i], source[i])
+    elif isinstance(target, dict) and isinstance(source, dict):
+        for k, v in target.iteritems():
+            copy_locators(v, source[k])

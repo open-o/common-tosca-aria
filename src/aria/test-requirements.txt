@@ -1,4 +1,0 @@
-pytest==2.9.2
-
-mock>=1.0.1
-testtools

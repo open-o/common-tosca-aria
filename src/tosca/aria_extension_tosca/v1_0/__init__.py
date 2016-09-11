@@ -14,15 +14,16 @@
 # under the License.
 #
 
-from .presenter import *
-from .presentation import *
-from .assignments import *
-from .definitions import *
-from .filters import *
-from .templates import *
-from .types import *
-from .misc import *
-from .data_types import *
+from .presenter import ToscaSimplePresenter1_0
+from .presentation import ToscaPresentation
+from .assignments import PropertyAssignment, OperationAssignment, InterfaceAssignment, RelationshipAssignment, RequirementAssignment, AttributeAssignment, CapabilityAssignment, ArtifactAssignment
+from .definitions import PropertyDefinition, AttributeDefinition, ParameterDefinition, OperationDefinition, InterfaceDefinition, RelationshipDefinition, RequirementDefinition, CapabilityDefinition
+from .filters import CapabilityFilter, NodeFilter
+from .misc import Description, MetaData, Repository, Import, ConstraintClause, EntrySchema, OperationImplementation, SubstitutionMappingsRequirement, SubstitutionMappingsCapability, SubstitutionMappings
+from .templates import NodeTemplate, RelationshipTemplate, GroupDefinition, PolicyDefinition, TopologyTemplate, ServiceTemplate
+from .types import ArtifactType, DataType, CapabilityType, InterfaceType, RelationshipType, NodeType, GroupType, PolicyType
+from .data_types import Timestamp, Version, Range, List, Map, ScalarSize, ScalarTime, ScalarFrequency
+from .functions import Concat, Token, GetInput, GetProperty, GetAttribute, GetOperationOutput, GetNodesOfType, GetArtifact
 
 MODULES = (
     'utils',)
@@ -56,6 +57,9 @@ __all__ = (
     'ConstraintClause',
     'EntrySchema',
     'OperationImplementation',
+    'SubstitutionMappingsRequirement',
+    'SubstitutionMappingsCapability',
+    'SubstitutionMappings',
     'NodeTemplate',
     'RelationshipTemplate',
     'GroupDefinition',
@@ -77,4 +81,12 @@ __all__ = (
     'Map',
     'ScalarSize',
     'ScalarTime',
-    'ScalarFrequency')
+    'ScalarFrequency',
+    'Concat',
+    'Token',
+    'GetInput',
+    'GetProperty',
+    'GetAttribute',
+    'GetOperationOutput',
+    'GetNodesOfType',
+    'GetArtifact')

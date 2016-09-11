@@ -16,7 +16,8 @@
 
 from .data_types import coerce_value
 from aria import Issue
-from aria.utils import merge, deepclone
+from aria.presentation import Value
+from aria.utils import merge, deepcopy_with_locators
 from collections import OrderedDict
 
 #
@@ -137,7 +138,7 @@ def merge_raw_property_definitions(context, presentation, raw_property_definitio
             raw_property_definition = raw_property_definitions[property_name]
             merge_raw_property_definition(context, presentation, raw_property_definition, our_property_definition, field_name, property_name)
         else:
-            raw_property_definitions[property_name] = deepclone(our_property_definition._raw)
+            raw_property_definitions[property_name] = deepcopy_with_locators(our_property_definition._raw)
 
 def merge_property_definitions(context, presentation, property_definitions, our_property_definitions, field_name, for_presentation):
     if not our_property_definitions:
@@ -153,12 +154,13 @@ def coerce_property_value(context, presentation, definition, value, aspect=None)
     the_type = definition._get_type(context) if definition is not None else None
     entry_schema = definition.entry_schema if definition is not None else None
     constraints = definition._get_constraints(context) if definition is not None else None
-    return coerce_value(context, presentation, the_type, entry_schema, constraints, value, aspect)
+    value = coerce_value(context, presentation, the_type, entry_schema, constraints, value, aspect)
+    return Value(definition.type, value) if value is not None else None
 
-def convert_property_definitions_to_values(definitions):
+def convert_property_definitions_to_values(context, presentation, definitions):
     values = OrderedDict()
     for name, definition in definitions.iteritems():
         default = definition.default
         if default is not None:
-            values[name] = default
+            values[name] = coerce_property_value(context, presentation, definition, default)
     return values

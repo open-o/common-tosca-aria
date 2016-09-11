@@ -24,6 +24,34 @@ import itertools, multiprocessing
 class ExecutorException(Exception):
     pass
 
+class DaemonThread(Thread):
+    def __init__(self, *args, **kwargs):
+        super(DaemonThread, self).__init__(*args, **kwargs)
+        self.daemon = True
+    
+    def run(self):
+        """
+        We're overriding `Thread.run` in order to avoid annoying (but harmless) error
+        messages during shutdown. The problem is that CPython nullifies the
+        global state _before_ shutting down daemon threads, so that exceptions
+        might happen, and then `Thread.__bootstrap_inner` prints them out.
+        
+        Our solution is to swallow these exceptions here.
+        
+        The side effect is that uncaught exceptions in our own thread code will _not_
+        be printed out as usual, so it's our responsibility to catch them in our
+        code. 
+        """
+        
+        try:
+            super(DaemonThread, self).run()
+        except SystemExit as e:
+            # This exception should be bubbled up
+            raise e
+        except:
+            # Exceptions might occur in daemon threads during interpreter shutdown
+            pass
+
 # https://gist.github.com/tliron/81dd915166b0bfc64be08b4f8e22c835
 class FixedThreadPoolExecutor(object):
     """
@@ -79,10 +107,9 @@ class FixedThreadPoolExecutor(object):
 
         self._workers = []
         for index in range(size):
-            worker = Thread(
+            worker = DaemonThread(
                 name='%s%d' % (self.__class__.__name__, index),
                 target=self._thread_worker)
-            worker.daemon = True
             worker.start()
             self._workers.append(worker)
 
@@ -173,6 +200,7 @@ class FixedThreadPoolExecutor(object):
         try:
             task = self._tasks.get(timeout=self.timeout)
         except Empty:
+            # Happens if timeout is reached
             return True
         if task == self._CYANIDE:
             # Time to die :(

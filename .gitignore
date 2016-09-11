@@ -4,6 +4,8 @@
 env/
 docs/
 out/
+build/
+dist/
 
 .tox/
 .coverage
@@ -14,3 +16,8 @@ out/
 .DS_Store
 
 .idea/
+
+update-docs.sh
+*.pem
+
+test

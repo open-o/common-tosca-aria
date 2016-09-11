@@ -16,7 +16,7 @@
 
 from .properties import coerce_property_value, convert_property_definitions_to_values
 from aria import Issue
-from aria.utils import merge, deepclone
+from aria.utils import merge, deepcopy_with_locators
 from collections import OrderedDict
 
 #
@@ -181,7 +181,7 @@ def convert_interface_definition_from_type_to_raw_template(context, presentation
     # Copy default values for inputs
     inputs = presentation._get_inputs(context)
     if inputs is not None:
-        raw['inputs'] = convert_property_definitions_to_values(inputs)
+        raw['inputs'] = convert_property_definitions_to_values(context, presentation, inputs)
     
     # Copy operations
     operations = presentation._get_operations(context)
@@ -190,13 +190,13 @@ def convert_interface_definition_from_type_to_raw_template(context, presentation
             raw[operation_name] = OrderedDict()
             description = operation.description
             if description is not None:
-                raw[operation_name]['description'] = deepclone(description._raw)
+                raw[operation_name]['description'] = deepcopy_with_locators(description._raw)
             implementation = operation.implementation
             if implementation is not None:
-                raw[operation_name]['implementation'] = deepclone(implementation._raw)
+                raw[operation_name]['implementation'] = deepcopy_with_locators(implementation._raw)
             inputs = operation.inputs
             if inputs is not None:
-                raw[operation_name]['inputs'] = convert_property_definitions_to_values(inputs)
+                raw[operation_name]['inputs'] = convert_property_definitions_to_values(context, presentation, inputs)
     
     return raw
 
@@ -235,7 +235,7 @@ def merge_interface(context, presentation, interface_assignment, our_interface_a
                     interface_assignment._raw[operation_name] = OrderedDict()
                 
             if our_implementation is not None:
-                interface_assignment._raw[operation_name]['implementation'] = deepclone(our_implementation._raw)
+                interface_assignment._raw[operation_name]['implementation'] = deepcopy_with_locators(our_implementation._raw)
 
             # Assign/merge operation inputs
             input_definitions = operation_definition.inputs if operation_definition is not None else None
@@ -267,12 +267,12 @@ def merge_raw_input_definitions(context, raw_inputs, our_inputs, interface_name,
         if input_name in raw_inputs:
             merge_raw_input_definition(context, raw_inputs[input_name], our_input, interface_name, operation_name, presentation, type_name)
         else:
-            raw_inputs[input_name] = deepclone(our_input._raw)
+            raw_inputs[input_name] = deepcopy_with_locators(our_input._raw)
 
 def merge_raw_operation_definition(context, raw_operation, our_operation, interface_name, presentation, type_name):
     if not isinstance(our_operation._raw, dict):
         # Convert short form to long form
-        raw_operation['implementation'] = deepclone(our_operation._raw)
+        raw_operation['implementation'] = deepcopy_with_locators(our_operation._raw)
         return
     
     # Add/merge inputs
@@ -286,14 +286,14 @@ def merge_raw_operation_definition(context, raw_operation, our_operation, interf
     
     # Override the description
     if our_operation._raw.get('description') is not None:
-        raw_operation['description'] = deepclone(our_operation._raw['description'])
+        raw_operation['description'] = deepcopy_with_locators(our_operation._raw['description'])
     
     # Add/merge implementation
     if our_operation._raw.get('implementation') is not None:
         if raw_operation.get('implementation') is not None:
-            merge(raw_operation['implementation'], deepclone(our_operation._raw['implementation']))
+            merge(raw_operation['implementation'], deepcopy_with_locators(our_operation._raw['implementation']))
         else:
-            raw_operation['implementation'] = deepclone(our_operation._raw['implementation'])
+            raw_operation['implementation'] = deepcopy_with_locators(our_operation._raw['implementation'])
 
 def merge_operation_definitions(context, operations, our_operations, interface_name, presentation, type_name):
     if not our_operations:
@@ -307,9 +307,14 @@ def merge_operation_definitions(context, operations, our_operations, interface_n
 def merge_raw_operation_definitions(context, raw_operations, our_operations, interface_name, presentation, type_name):
     for operation_name, our_operation in our_operations.iteritems():
         if operation_name in raw_operations:
-            merge_raw_operation_definition(context, raw_operations[operation_name], our_operation, interface_name, presentation, type_name)
+            raw_operation = raw_operations[operation_name]
+            if isinstance(raw_operation, basestring):
+                # Convert short form to long form
+                raw_operations[operation_name] = OrderedDict((('implementation', raw_operation),))
+                raw_operation = raw_operations[operation_name]
+            merge_raw_operation_definition(context, raw_operation, our_operation, interface_name, presentation, type_name)
         else:
-            raw_operations[operation_name] = deepclone(our_operation._raw)
+            raw_operations[operation_name] = deepcopy_with_locators(our_operation._raw)
 
 def merge_interface_definition(context, interface, our_source, presentation, type_name): # from either an InterfaceType or an InterfaceDefinition
     if hasattr(our_source, 'type'):

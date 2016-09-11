@@ -93,7 +93,7 @@ class ArtifactType(ToscaPresentation):
     
     @cachedmethod
     def _get_parent(self, context):
-        return context.presentation.artifact_types.get(self.derived_from)
+        return context.presentation.presenter.artifact_types.get(self.derived_from)
 
     @cachedmethod
     def _get_properties(self, context):
@@ -264,7 +264,15 @@ class CapabilityType(ToscaPresentation):
         
     @cachedmethod
     def _get_parent(self, context):
-        return context.presentation.capability_types.get(self.derived_from)
+        return context.presentation.presenter.capability_types.get(self.derived_from)
+
+    @cachedmethod
+    def _is_descendant(self, context, the_type):
+        if the_type is None:
+            return False
+        elif the_type._name == self._name:
+            return True
+        return self._is_descendant(context, the_type._get_parent(context))
 
     @cachedmethod
     def _get_properties(self, context):
@@ -338,7 +346,7 @@ class InterfaceType(ToscaPresentation):
 
     @cachedmethod
     def _get_parent(self, context):
-        return context.presentation.interface_types.get(self.derived_from)
+        return context.presentation.presenter.interface_types.get(self.derived_from)
 
     @cachedmethod
     def _get_inputs(self, context):
@@ -431,7 +439,7 @@ class RelationshipType(ToscaPresentation):
 
     @cachedmethod
     def _get_parent(self, context):
-        return context.presentation.relationship_types.get(self.derived_from)
+        return context.presentation.presenter.relationship_types.get(self.derived_from)
 
     @cachedmethod
     def _get_properties(self, context):
@@ -548,13 +556,13 @@ class NodeType(ToscaPresentation):
 
     @cachedmethod
     def _get_parent(self, context):
-        return context.presentation.node_types.get(self.derived_from)
+        return context.presentation.presenter.node_types.get(self.derived_from)
 
     @cachedmethod
     def _is_descendant(self, context, the_type):
         if the_type is None:
             return False
-        elif the_type == self:
+        elif the_type._name == self._name:
             return True
         return self._is_descendant(context, the_type._get_parent(context))
 
@@ -668,13 +676,13 @@ class GroupType(ToscaPresentation):
 
     @cachedmethod
     def _get_parent(self, context):
-        return context.presentation.group_types.get(self.derived_from)
+        return context.presentation.presenter.group_types.get(self.derived_from)
 
     @cachedmethod
     def _is_descendant(self, context, the_type):
         if the_type is None:
             return False
-        elif the_type == self:
+        elif the_type._name == self._name:
             return True
         return self._is_descendant(context, the_type._get_parent(context))
 
@@ -755,7 +763,7 @@ class PolicyType(ToscaPresentation):
 
     @cachedmethod
     def _get_parent(self, context):
-        return context.presentation.policy_types.get(self.derived_from)
+        return context.presentation.presenter.policy_types.get(self.derived_from)
 
     @cachedmethod
     def _get_properties(self, context):

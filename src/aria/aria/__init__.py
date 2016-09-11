@@ -14,17 +14,17 @@
 # under the License.
 #
 
-from .issue import *
-from .exceptions import *
-from .specification import *
-import pkgutil
+from .issue import Issue
+from .exceptions import AriaError, UnimplementedFunctionalityError, InvalidValueError
+from .specification import DSL_SPECIFICATION, DSL_SPECIFICATION_PACKAGES, dsl_specification, iter_spec
+import sys, pkgutil
 
 VERSION = '0.1'
 
 def install_aria_extensions():
     """
-    Iterates all Python packages with names beginning with "aria\_extension\_" and calls
-    their "install\_aria\_extension" function if they have it.
+    Iterates all Python packages with names beginning with :code:`aria_extension_` and calls
+    their :code:`install_aria_extension` function if they have it.
     """
     
     for loader, module_name, _ in pkgutil.iter_modules():
@@ -42,7 +42,6 @@ MODULES = (
     'deployment',
     'execution',
     'loading',
-    'parsing',
     'presentation',
     'reading',
     'tools',

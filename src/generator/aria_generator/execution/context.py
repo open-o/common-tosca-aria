@@ -16,8 +16,7 @@
 
 from .exceptions import ExecutorNotFoundError
 from .cloudify import HostAgentExecutor, CentralDeploymentAgentExecutor
-from aria.utils import classname
-from clint.textui import puts
+from aria.utils import classname, puts
 
 class Relationship(object):
     def __init__(self, source, relationship, target):

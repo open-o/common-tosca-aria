@@ -16,6 +16,8 @@
 
 from .exceptions import PresenterNotFoundError
 
+PRESENTER_CLASSES = []
+
 class PresenterSource(object):
     """
     Base class for ARIA presenter sources.
@@ -25,3 +27,18 @@ class PresenterSource(object):
 
     def get_presenter(self, raw):
         raise PresenterNotFoundError()
+
+class DefaultPresenterSource(PresenterSource):
+    """
+    The default ARIA presenter source supports TOSCA Simple Profile and Cloudify DSLs.
+    """
+    
+    def __init__(self, classes=PRESENTER_CLASSES):
+        self.classes = classes
+
+    def get_presenter(self, raw):
+        for cls in self.classes:
+            if cls.can_present(raw):
+                return cls
+                
+        return super(DefaultPresenterSource, self).get_presenter(raw)

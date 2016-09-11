@@ -18,11 +18,13 @@ tosca_definitions_version: tosca_simple_yaml_1_0
 
 description: >-
   Node Cellar TOSCA blueprint.
+  Here is some Unicode: 中國.
 
 metadata:
   template_name: node-cellar
   template_author: ARIA
-  template_version: 1.0.0
+  template_version: '1.0.0'
+  aria_version: '1.0'
 
 imports:
   - types/openstack.yaml
@@ -229,3 +231,11 @@ topology_template:
         bandwidth_threshold: 2 GB
       targets: # node templates or groups
         - node_cellar_group
+
+  substitution_mappings:
+
+    node_type: tosca.nodes.WebApplication
+    requirements:
+      host: [ node_cellar, host ] # doesn't really make sense; just for testing
+    capabilities:
+      app_endpoint: [ loadbalancer, client ]

@@ -14,14 +14,15 @@
 # under the License.
 #
 
-from .exceptions import *
-from .reader import *
-from .source import *
-from .context import *
-from .locator import *
-from .raw import *
-from .yaml import *
-from .jinja import *
+from .exceptions import ReaderError, ReaderNotFoundError, ReaderSyntaxError, AlreadyReadError
+from .reader import Reader
+from .source import ReaderSource, DefaultReaderSource
+from .context import ReadingContext
+from .raw import RawReader
+from .locator import init_yaml, Locator
+from .yaml import YamlReader
+from .json import JsonReader
+from .jinja import JinjaReader
 
 __all__ = (
     'ReaderError',
@@ -30,10 +31,11 @@ __all__ = (
     'AlreadyReadError',
     'Reader',
     'ReaderSource',
+    'DefaultReaderSource',
     'ReadingContext',
     'RawReader',
     'init_yaml',
     'Locator',
     'YamlReader',
-    'JinjaReader',
-    'DefaultReaderSource')
+    'JsonReader',
+    'JinjaReader')

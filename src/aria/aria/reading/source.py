@@ -14,9 +14,10 @@
 # under the License.
 #
 
-from ..loading import LiteralLocation
+from ..loading import LiteralLocation, UriLocation
 from .exceptions import ReaderNotFoundError
 from .yaml import YamlReader
+from .json import JsonReader
 from .jinja import JinjaReader
 
 class ReaderSource(object):
@@ -31,13 +32,15 @@ class ReaderSource(object):
 
 EXTENSIONS = {
     '.yaml': YamlReader,
+    '.json': JsonReader,
     '.jinja': JinjaReader}
 
 class DefaultReaderSource(ReaderSource):
     """
     The default ARIA reader source will generate a :class:`YamlReader` for
-    locations that end in ".yaml", and a :class:`JinjaReader` for locations
-    that end in ".jinja". 
+    locations that end in ".yaml", a :class:`JsonReader` for locations that
+    end in ".json",  and a :class:`JinjaReader` for locations that end in
+    ".jinja". 
     """
     
     def __init__(self, literal_reader_class=YamlReader):
@@ -46,9 +49,11 @@ class DefaultReaderSource(ReaderSource):
 
     def get_reader(self, context, location, loader):
         if isinstance(location, LiteralLocation):
-            return self.literal_reader_class(context, self, location, loader)
-        elif isinstance(location, basestring):
+            return self.literal_reader_class(context, location, loader)
+        
+        elif isinstance(location, UriLocation):
             for extension, reader_class in EXTENSIONS.iteritems():
-                if location.endswith(extension):
-                    return reader_class(context, self, location, loader)
+                if location.uri.endswith(extension):
+                    return reader_class(context, location, loader)
+                
         return super(DefaultReaderSource, self).get_reader(context, location, loader)

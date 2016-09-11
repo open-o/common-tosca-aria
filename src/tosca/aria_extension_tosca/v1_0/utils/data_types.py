@@ -116,7 +116,7 @@ def get_data_type(context, presentation, field_name, allow_none=False):
             return str
     
     # Try complex data type
-    data_type = context.presentation.data_types.get(the_type) if context.presentation.data_types is not None else None
+    data_type = context.presentation.presenter.data_types.get(the_type) if context.presentation.presenter.data_types is not None else None
     if data_type is not None:
         return data_type 
     
@@ -254,7 +254,7 @@ def apply_constraint_to_value(context, presentation, constraint_clause, value):
 #
 
 def get_data_type_value(context, presentation, field_name, type_name):
-    the_type = context.presentation.data_types.get(type_name) if context.presentation.data_types is not None else None
+    the_type = context.presentation.presenter.data_types.get(type_name) if context.presentation.presenter.data_types is not None else None
     if the_type is not None:
         value = getattr(presentation, field_name)
         if value is not None:
@@ -334,11 +334,8 @@ def coerce_value(context, presentation, the_type, entry_schema, constraints, val
         # Delegate to _coerce_value (likely a DataType instance)
         return the_type._coerce_value(context, presentation, entry_schema, constraints, value, aspect)
 
-    if the_type is not None:
-        # Coerce to primitive type
-        return coerce_to_primitive(context, presentation, the_type, constraints, value, aspect)
-    
-    return None
+    # Coerce to primitive type
+    return coerce_to_primitive(context, presentation, the_type, constraints, value, aspect)
 
 def coerce_to_primitive(context, presentation, primitive_type, constraints, value, aspect=None):
     """

@@ -17,7 +17,7 @@
 from .properties import convert_property_definitions_to_values, validate_required_values, coerce_property_value
 from .interfaces import convert_requirement_interface_definitions_from_type_to_raw_template, merge_interface_definitions, merge_interface, validate_required_inputs
 from aria import Issue
-from aria.utils import deepclone
+from aria.utils import deepcopy_with_locators
 from collections import OrderedDict
 
 #
@@ -72,7 +72,7 @@ def get_template_requirements(context, presentation):
         for requirement_name, our_requirement_assignment in our_requirement_assignments:
             requirement_definition = get_first_requirement(requirement_definitions, requirement_name)
             if requirement_definition is not None:
-                requirement_assignment, relationship_property_definitions, relationship_interface_definitions = convert_requirement_from_definition_to_assignment(context, requirement_definition, our_requirement_assignment, presentation)
+                requirement_assignment, relationship_property_definitions, relationship_interface_definitions = convert_requirement_from_definition_to_assignment(context, presentation, requirement_definition, our_requirement_assignment, presentation)
                 merge_requirement_assignment(context, presentation, relationship_property_definitions, relationship_interface_definitions, requirement_assignment, our_requirement_assignment)
                 validate_requirement_assignment(context, our_requirement_assignment.relationship or our_requirement_assignment, requirement_assignment, relationship_property_definitions, relationship_interface_definitions)
                 requirement_assignments.append((requirement_name, requirement_assignment))
@@ -96,7 +96,7 @@ def get_template_requirements(context, presentation):
                 # If not specified, we interpret this to mean that exactly 1 occurrence is required
                 if actual_occurrences == 0:
                     # If it's not there, we will automatically add it (this behavior is not in the TOSCA spec, but seems implied)
-                    requirement_assignment, relationship_property_definitions, relationship_interface_definitions = convert_requirement_from_definition_to_assignment(context, requirement_definition, None, presentation)
+                    requirement_assignment, relationship_property_definitions, relationship_interface_definitions = convert_requirement_from_definition_to_assignment(context, presentation, requirement_definition, None, presentation)
                     validate_requirement_assignment(context, presentation, requirement_assignment, relationship_property_definitions, relationship_interface_definitions)
                     requirement_assignments.append((requirement_name, requirement_assignment))
                 elif actual_occurrences > 1:
@@ -114,16 +114,16 @@ def get_template_requirements(context, presentation):
 # Utils
 #
 
-def convert_requirement_from_definition_to_assignment(context, requirement_definition, our_requirement_assignment, container):
+def convert_requirement_from_definition_to_assignment(context, presentation, requirement_definition, our_requirement_assignment, container):
     from ..assignments import RequirementAssignment
     
     raw = OrderedDict()
     
-    raw['capability'] = deepclone(requirement_definition.capability) # capability type name
+    raw['capability'] = deepcopy_with_locators(requirement_definition.capability) # capability type name
     
     node_type = requirement_definition._get_node_type(context)
     if node_type is not None:
-        raw['node'] = deepclone(node_type._name)
+        raw['node'] = deepcopy_with_locators(node_type._name)
     
     relationship_type = None
     relationship_template = None
@@ -152,7 +152,7 @@ def convert_requirement_from_definition_to_assignment(context, requirement_defin
         if type_name is None:
             type_name = relationship_type._name
         
-        raw['relationship']['type'] = deepclone(type_name)
+        raw['relationship']['type'] = deepcopy_with_locators(type_name)
         
         # These are our property definitions
         relationship_property_definitions = relationship_type._get_properties(context)
@@ -163,7 +163,7 @@ def convert_requirement_from_definition_to_assignment(context, requirement_defin
         else:
             if relationship_property_definitions:
                 # Convert property definitions to values
-                raw['properties'] = convert_property_definitions_to_values(relationship_property_definitions)
+                raw['properties'] = convert_property_definitions_to_values(context, presentation, relationship_property_definitions)
         
         # These are our interface definitions
         relationship_interface_definitions = OrderedDict(relationship_type._get_interfaces(context)) # InterfaceDefinition
@@ -189,15 +189,15 @@ def convert_requirement_from_definition_to_assignment(context, requirement_defin
 def merge_requirement_assignment(context, presentation, relationship_property_definitions, relationship_interface_definitions, requirement, our_requirement):
     our_capability = our_requirement.capability
     if our_capability is not None:
-        requirement._raw['capability'] = deepclone(our_capability)
+        requirement._raw['capability'] = deepcopy_with_locators(our_capability)
         
     our_node = our_requirement.node
     if our_node is not None:
-        requirement._raw['node'] = deepclone(our_node)
+        requirement._raw['node'] = deepcopy_with_locators(our_node)
         
     our_node_filter = our_requirement.node_filter
     if our_node_filter is not None:
-        requirement._raw['node_filter'] = deepclone(our_node_filter._raw)
+        requirement._raw['node_filter'] = deepcopy_with_locators(our_node_filter._raw)
 
     our_relationship = our_requirement.relationship # RelationshipAssignment
     if our_relationship is not None:
@@ -208,14 +208,14 @@ def merge_requirement_assignment(context, presentation, relationship_property_de
             # Convert existing short form to long form
             the_type = requirement._raw['relationship']
             requirement._raw['relationship'] = OrderedDict()
-            requirement._raw['relationship']['type'] = deepclone(the_type)
+            requirement._raw['relationship']['type'] = deepcopy_with_locators(the_type)
 
         merge_requirement_assignment_relationship(context, our_relationship, relationship_property_definitions, relationship_interface_definitions, requirement, our_relationship)
 
 def merge_requirement_assignment_relationship(context, presentation, property_definitions, interface_definitions, requirement, our_relationship):
     the_type = our_relationship.type
     if the_type is not None:
-        requirement._raw['relationship']['type'] = deepclone(the_type) # could be a type or a template
+        requirement._raw['relationship']['type'] = deepcopy_with_locators(the_type) # could be a type or a template
 
     our_relationship_properties = our_relationship._raw.get('properties')
     if our_relationship_properties:

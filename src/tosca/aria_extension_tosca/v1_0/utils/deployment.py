@@ -14,15 +14,30 @@
 # under the License.
 #
 
-from aria.deployment import DeploymentTemplate, Type, NodeTemplate, RelationshipTemplate, CapabilityTemplate, GroupTemplate, PolicyTemplate, Interface, Operation, Artifact, Requirement
+from aria.deployment import Type, RelationshipType, DeploymentTemplate, NodeTemplate, RelationshipTemplate, CapabilityTemplate, GroupTemplate, PolicyTemplate, SubstitutionTemplate, MappingTemplate, Interface, Operation, Artifact, Requirement, Metadata, Parameter
 from .data_types import coerce_value
 import re
 
 def get_deployment_template(context, presenter):
     r = DeploymentTemplate()
 
+    r.description = presenter.service_template.description.value if presenter.service_template.description is not None else None
+
+    metadata = presenter.service_template.metadata
+    if metadata is not None:
+        rr = Metadata()
+        rr.values['template_name'] = metadata.template_name
+        rr.values['template_author'] = metadata.template_author
+        rr.values['template_version'] = metadata.template_version
+        custom = metadata.custom
+        if custom:
+            for name, value in custom.iteritems():
+                rr.values[name] = value
+        r.metadata = rr
+
     normalize_types(context, context.deployment.node_types, presenter.node_types)
     normalize_types(context, context.deployment.capability_types, presenter.capability_types)
+    normalize_types(context, context.deployment.relationship_types, presenter.relationship_types, normalize_relationship_type)
     
     topology_template = presenter.service_template.topology_template
     if topology_template is not None:
@@ -44,32 +59,23 @@ def get_deployment_template(context, presenter):
         for policy_name, policy in policies.iteritems():
             r.policy_templates[policy_name] = normalize_policy(context, policy)
 
+    substitution_mappings = topology_template.substitution_mappings if topology_template is not None else None
+    if substitution_mappings is not None:
+        rr = SubstitutionTemplate(substitution_mappings.node_type)
+        capabilities = substitution_mappings.capabilities
+        if capabilities:
+            for mapped_capability_name, capability in capabilities.iteritems():
+                rr.capabilities[mapped_capability_name] = MappingTemplate(mapped_capability_name, capability.node_template, capability.capability)
+        requirements = substitution_mappings.requirements
+        if requirements:
+            for mapped_requirement_name, requirement in requirements.iteritems():
+                rr.requirements[mapped_requirement_name] = MappingTemplate(mapped_requirement_name, requirement.node_template, requirement.requirement)
+        r.substitution_template = rr
+
     return r
 
-def normalize_types(context, root, types):
-    if types is None:
-        return
-    
-    def added_all():
-        for name in types:
-            if root.get_descendant(name) is None:
-                return False
-        return True
-
-    while not added_all():    
-        for name, the_type in types.iteritems():
-            if root.get_descendant(name) is None:
-                parent_type = the_type._get_parent(context)
-                if parent_type is None:
-                    root.children.append(Type(the_type._name))
-                else:
-                    container = root.get_descendant(parent_type._name)
-                    if container is not None:
-                        container.children.append(Type(the_type._name))
-
 def normalize_node_template(context, node_template):
-    the_type = node_template._get_type(context)
-    r = NodeTemplate(name=node_template._name, type_name=the_type._name)
+    r = NodeTemplate(name=node_template._name, type_name=node_template.type)
 
     normalize_property_values(r.properties, node_template._get_property_values(context))
     normalize_interfaces(context, r.interfaces, node_template._get_interfaces(context))
@@ -89,7 +95,7 @@ def normalize_node_template(context, node_template):
         for capability_name, capability in capabilities.iteritems():
             r.capabilities[capability_name] = normalize_capability(context, capability)
 
-    normalize_node_filter(context, node_template.node_filter, r.target_node_type_constraints)
+    normalize_node_filter(context, node_template.node_filter, r.target_node_template_constraints)
     
     return r
 
@@ -99,15 +105,14 @@ def normalize_interface(context, interface):
     inputs = interface.inputs
     if inputs:
         for input_name, the_input in inputs.iteritems():
-            r.inputs[input_name] = the_input.value
+            r.inputs[input_name] = Parameter(the_input.value.type, the_input.value.value, None) # TODO: description
 
     operations = interface.operations
     if operations:
         for operation_name, operation in operations.iteritems():
-            #if operation.implementation is not None:
             r.operations[operation_name] = normalize_operation(context, operation)
     
-    return r #if r.operations else None
+    return r if r.operations else None
 
 def normalize_operation(context, operation):
     r = Operation(name=operation._name)
@@ -122,7 +127,7 @@ def normalize_operation(context, operation):
     inputs = operation.inputs
     if inputs:
         for input_name, the_input in inputs.iteritems():
-            r.inputs[input_name] = the_input.value
+            r.inputs[input_name] = Parameter(the_input.value.type, the_input.value.value, None) # TODO: description
     
     return r
 
@@ -162,13 +167,16 @@ def normalize_requirement(context, requirement):
 
     r = Requirement(**r)
 
-    normalize_node_filter(context, requirement.node_filter, r.target_node_type_constraints)
+    normalize_node_filter(context, requirement.node_filter, r.target_node_template_constraints)
 
     relationship = requirement.relationship
     if relationship is not None:
         r.relationship_template = normalize_relationship(context, relationship)
         
     return r
+
+def normalize_relationship_type(context, relationship_type):
+    return RelationshipType(relationship_type._name)
 
 def normalize_relationship(context, relationship):
     relationship_type, relationship_type_variant = relationship._get_type(context)
@@ -178,7 +186,7 @@ def normalize_relationship(context, relationship):
         r = RelationshipTemplate(template_name=relationship_type._name)
 
     normalize_properties(r.properties, relationship.properties)
-    normalize_interfaces(context, r.interfaces, relationship.interfaces)
+    normalize_interfaces(context, r.source_interfaces, relationship.interfaces)
     
     return r
 
@@ -233,15 +241,40 @@ def normalize_policy(context, policy):
 # Utils
 #
 
+def normalize_types(context, root, types, normalize=None):
+    if types is None:
+        return
+    
+    def added_all():
+        for name in types:
+            if root.get_descendant(name) is None:
+                return False
+        return True
+
+    while not added_all():    
+        for name, the_type in types.iteritems():
+            if root.get_descendant(name) is None:
+                parent_type = the_type._get_parent(context)
+                if normalize:
+                    r = normalize(context, the_type)
+                else:
+                    r = Type(the_type._name)
+                if parent_type is None:
+                    root.children.append(r)
+                else:
+                    container = root.get_descendant(parent_type._name)
+                    if container is not None:
+                        container.children.append(r)
+
 def normalize_property_values(properties, source_properties):
     if source_properties:
         for property_name, prop in source_properties.iteritems():
-            properties[property_name] = prop
+            properties[property_name] = Parameter(prop.type, prop.value, None) # TODO: description
 
 def normalize_properties(properties, source_properties):
     if source_properties:
         for property_name, prop in source_properties.iteritems():
-            properties[property_name] = prop.value
+            properties[property_name] = Parameter(prop.value.type, prop.value.value, None) # TODO: description
 
 def normalize_interfaces(context, interfaces, source_interfaces):
     if source_interfaces:
@@ -285,7 +318,8 @@ def normalize_constraint_clause(context, node_filter, constraint_clause, propert
         if capability_name is not None:
             capability = node_type.capabilities.get(capability_name)
             return capability.properties.get(property_name) if capability is not None else None
-        return node_type.properties.get(property_name)
+        value = node_type.properties.get(property_name)
+        return value.value if value is not None else None
 
     if constraint_key == 'equal':
         def equal(node_type, container):

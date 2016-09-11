@@ -14,10 +14,9 @@
 # under the License.
 #
 
-from .. import install_aria_extensions, DSL_SPECIFICATION_PACKAGES, DSL_SPECIFICATION, iter_spec
-from ..utils import print_exception, import_modules
 from .utils import BaseArgumentParser
-from clint.textui import puts, colored, indent
+from .. import install_aria_extensions, DSL_SPECIFICATION_PACKAGES, DSL_SPECIFICATION, iter_spec
+from ..utils import print_exception, import_modules, puts, colored, indent
 import csv, sys
 
 class ArgumentParser(BaseArgumentParser):

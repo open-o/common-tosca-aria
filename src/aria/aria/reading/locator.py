@@ -14,12 +14,12 @@
 # under the License.
 #
 
-from clint.textui import puts, colored, indent
+from ..utils import puts, colored, indent
 from ruamel.yaml.representer import RoundTripRepresenter # @UnresolvedImport
 
 # We are inheriting the primitive types in order to add the ability to set an attribute (_locator) on them.
 
-class LocatableString(str):
+class LocatableString(unicode):
     pass
 
 class LocatableInt(int):
@@ -31,14 +31,14 @@ class LocatableFloat(float):
 def wrap(value):
     if isinstance(value, basestring):
         return True, LocatableString(value)
-    elif isinstance(value, int):
+    elif isinstance(value, int) and not isinstance(value, bool): # Note: bool counts as int in Python! 
         return True, LocatableInt(value)
     elif isinstance(value, float):
         return True, LocatableFloat(value)
     return False, value
 
 def init_yaml():
-    # Add our types to ruamel.yaml
+    # Add our types to ruamel.yaml (for round trips)
     RoundTripRepresenter.add_representer(LocatableString, RoundTripRepresenter.represent_str)
     RoundTripRepresenter.add_representer(LocatableInt, RoundTripRepresenter.represent_int)
     RoundTripRepresenter.add_representer(LocatableFloat, RoundTripRepresenter.represent_float)

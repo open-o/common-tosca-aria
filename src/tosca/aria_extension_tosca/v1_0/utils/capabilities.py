@@ -16,7 +16,7 @@
 
 from .properties import convert_property_definitions_to_values, merge_raw_property_definitions, get_assigned_and_defined_property_values
 from aria import Issue
-from aria.utils import deepclone
+from aria.utils import deepcopy_with_locators
 from collections import OrderedDict
 
 #
@@ -125,7 +125,7 @@ def convert_capability_from_definition_to_assignment(context, presentation, cont
     
     properties = presentation.properties
     if properties is not None:
-        raw['properties'] = convert_property_definitions_to_values(properties)
+        raw['properties'] = convert_property_definitions_to_values(context, presentation, properties)
 
     # TODO attributes
 
@@ -149,4 +149,4 @@ def merge_capability_definition_from_type(context, presentation, capability_defi
     if capability_definition._raw.get('valid_source_types') is None:
         valid_source_types = the_type._get_valid_source_types(context)
         if valid_source_types is not None:
-            capability_definition._raw['valid_source_types'] = deepclone(valid_source_types)
+            capability_definition._raw['valid_source_types'] = deepcopy_with_locators(valid_source_types)

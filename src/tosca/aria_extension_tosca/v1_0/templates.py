@@ -15,12 +15,12 @@
 #
 
 from .presentation import ToscaPresentation
-from .misc import Description, MetaData, Repository, Import
+from .misc import Description, MetaData, Repository, Import, SubstitutionMappings
 from .definitions import ParameterDefinition
 from .assignments import PropertyAssignment, AttributeAssignment, RequirementAssignment, CapabilityAssignment, InterfaceAssignment, ArtifactAssignment
 from .types import ArtifactType, DataType, CapabilityType, InterfaceType, RelationshipType, NodeType, GroupType, PolicyType
 from .filters import NodeFilter
-from .field_validators import policy_targets_validator
+from .field_validators import copy_validator, policy_targets_validator
 from .utils.properties import get_assigned_and_defined_property_values, get_parameter_values
 from .utils.interfaces import get_template_interfaces
 from .utils.requirements import get_template_requirements
@@ -122,7 +122,7 @@ class NodeTemplate(ToscaPresentation):
         :rtype: :class:`NodeFilter`
         """
 
-    @field_validator(type_validator('node template', 'node_templates'))
+    @field_validator(copy_validator('node template', 'node_templates'))
     @primitive_field(str)
     def copy(self):
         """
@@ -137,7 +137,7 @@ class NodeTemplate(ToscaPresentation):
     
     @cachedmethod
     def _get_type(self, context):
-        return context.presentation.node_types.get(self.type) if context.presentation.node_types is not None else None
+        return context.presentation.presenter.node_types.get(self.type) if context.presentation.presenter.node_types is not None else None
 
     @cachedmethod
     def _get_property_values(self, context):
@@ -233,7 +233,7 @@ class RelationshipTemplate(ToscaPresentation):
         :rtype: dict of str, :class:`InterfaceAssignment`
         """
 
-    @field_validator(type_validator('relationship template', 'relationship_templates'))
+    @field_validator(copy_validator('relationship template', 'relationship_templates'))
     @primitive_field(str)
     def copy(self):
         """
@@ -248,7 +248,7 @@ class RelationshipTemplate(ToscaPresentation):
 
     @cachedmethod
     def _get_type(self, context):
-        return context.presentation.relationship_types.get(self.type) if context.presentation.relationship_types is not None else None
+        return context.presentation.presenter.relationship_types.get(self.type) if context.presentation.presenter.relationship_types is not None else None
 
     @cachedmethod
     def _get_property_values(self, context):
@@ -325,7 +325,7 @@ class GroupDefinition(ToscaPresentation):
 
     @cachedmethod
     def _get_type(self, context):
-        return context.presentation.group_types.get(self.type) if context.presentation.group_types is not None else None
+        return context.presentation.presenter.group_types.get(self.type) if context.presentation.presenter.group_types is not None else None
 
     @cachedmethod
     def _get_property_values(self, context):
@@ -385,7 +385,7 @@ class PolicyDefinition(ToscaPresentation):
 
     @cachedmethod
     def _get_type(self, context):
-        return context.presentation.policy_types.get(self.type) if context.presentation.policy_types is not None else None
+        return context.presentation.presenter.policy_types.get(self.type) if context.presentation.presenter.policy_types is not None else None
 
     @cachedmethod
     def _get_property_values(self, context):
@@ -465,7 +465,7 @@ class TopologyTemplate(ToscaPresentation):
         :rtype: dict of str, :class:`ParameterDefinition`
         """
     
-    @primitive_field()
+    @object_field(SubstitutionMappings)
     def substitution_mappings(self):
         """
         An optional declaration that exports the topology template as an implementation of a Node type.

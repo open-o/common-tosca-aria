@@ -14,53 +14,8 @@
 # under the License.
 #
 
+from ...v1_0.utils.node_templates import Scalable, get_node_template_scalable as _get_node_template_scalable
 from aria import Issue
-
-class Scalable(object):
-    """
-    The :code:`capabilities.scalable.properties` key is used for configuring the deployment characteristics of the node template.
-    """
-    
-    def __init__(self):
-        self.default_instances = 1
-        self.min_instances = 0
-        self.max_instances = -1
-        
-    def validate(self, context, presentation, locator):
-        def report(name, value, exception):
-            context.validation.report('"%s" property in "scalable" capability in node template "%s" is not a valid integer: %s' % (name, presentation._fullname, repr(value)), locator=locator, level=Issue.FIELD, exception=e)
-
-        try:
-            self.min_instances = int(self.min_instances)
-            if self.min_instances < 0:
-                context.validation.report('"min_instances" property in "scalable" capability in node template "%s" is less than 0: %s' % (presentation._fullname, repr(self.min_instances)), locator=locator, level=Issue.FIELD)
-        except ValueError as e:
-            report('min_instances', self.min_instances, e)
-            self.min_instances = 0
-        
-        if self.max_instances == 'UNBOUNDED':
-            self.max_instances = -1
-        try:
-            self.max_instances = int(self.max_instances)
-            if self.max_instances < -1:
-                context.validation.report('"max_instances" property in "scalable" capability in node template "%s" is less than -1: %s' % (presentation._fullname, repr(self.max_instances)), locator=locator, level=Issue.FIELD)
-            elif (self.max_instances != -1) and (self.max_instances < self.min_instances):
-                context.validation.report('"max_instances" property in "scalable" capability in node template "%s" is less than "min_instances": %s' % (presentation._fullname, repr(self.max_instances)), locator=locator, level=Issue.BETWEEN_FIELDS)
-        except ValueError as e:
-            report('max_instances', self.max_instances, e)
-            self.max_instances = -1
-        
-        try:
-            self.default_instances = int(self.default_instances)
-            if self.max_instances == -1:
-                if self.default_instances < self.min_instances:
-                    context.validation.report('"default_instances" property in "scalable" capability in node template "%s" is less than "min_instances": %s' % (presentation._fullname, repr(self.default_instances)), locator=locator, level=Issue.BETWEEN_FIELDS)
-            elif (self.default_instances < self.min_instances) or (self.default_instances > self.max_instances):
-                context.validation.report('"default_instances" property in "scalable" capability in node template "%s" is not bound between "min_instances" and "max_instances": %s' % (presentation._fullname, repr(self.default_instances)), locator=locator, level=Issue.BETWEEN_FIELDS)
-        except ValueError as e:
-            report('default_instances', self.default_instances, e)
-            self.default_instances = 1
-
 
 def get_node_template_scalable(context, presentation):
     scalable = Scalable()
@@ -91,9 +46,6 @@ def get_node_template_scalable(context, presentation):
 
     if not found:
         # Deprecated
-        instances = presentation.instances
-        if instances is not None:
-            scalable.default_instances = instances.deploy
-            scalable.validate(context, presentation, instances._locator)
+        return _get_node_template_scalable(context, presentation)
 
     return scalable

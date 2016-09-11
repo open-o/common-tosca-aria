@@ -18,9 +18,8 @@ from .consumer import Consumer
 
 class Types(Consumer):
     """
-    Emits the type hierarchies, highlighting inheritance and override. 
+    Emits the type hierarchies, highlighting inheritance and overrides. 
     """
     
-    def consume(self):
-        pass
-        # TODO
+    def dump(self):
+        self.context.deployment.dump_types(self.context)

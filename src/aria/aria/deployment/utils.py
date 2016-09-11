@@ -14,11 +14,40 @@
 # under the License.
 #
 
+from .exceptions import CannotEvaluateFunction
 from .. import InvalidValueError
-from clint.textui import puts
+from ..presentation import Value
+from ..utils import puts
 from collections import OrderedDict
+from shortuuid import ShortUUID
+from random import randrange
+
+#UUID = ShortUUID() # default alphabet is base57, which is alphanumeric without visually ambiguous characters; ID length is 22
+UUID = ShortUUID(alphabet='abcdefghijklmnopqrstuvwxyz0123456789') # alphanumeric; ID length is 25
+
+def generate_id_string(length=None):
+    """
+    A random string with a strong guarantee of universal uniqueness (uses UUID).
+    
+    The default length is 25 characters.
+    """
+    
+    the_id = UUID.uuid()
+    if length is not None:
+        the_id = the_id[:length]
+    return the_id
+
+def generate_hex_string():
+    """
+    A random string of 5 hex digits with no guarantee of universal uniqueness.
+    """
+
+    return '%05x' % randrange(16 ** 5)
 
 def coerce_value(context, container, value, report_issues=False):
+    if isinstance(value, Value):
+        value = value.value
+        
     if isinstance(value, list):
         return [coerce_value(context, container, v, report_issues) for v in value]
     elif isinstance(value, dict):
@@ -26,28 +55,31 @@ def coerce_value(context, container, value, report_issues=False):
     elif hasattr(value, '_evaluate'):
         try:
             value = value._evaluate(context, container)
+            value = coerce_value(context, container, value, report_issues)
+        except CannotEvaluateFunction:
+            pass
         except InvalidValueError as e:
             if report_issues:
                 context.validation.report(e.issue)
-            return value
-        value = coerce_value(context, container, value, report_issues)
     return value
 
 def coerce_dict_values(context, container, the_dict, report_issues=False):
+    for value in the_dict.itervalues():
+        value.coerce_values(context, container, report_issues)
+    return
     for k, value in the_dict.iteritems():
-        the_dict[k] = coerce_value(context, container, value, report_issues)
+        if hasattr(value, 'coerce_values'):
+            value.coerce_values(context, container, report_issues)
+        else:
+            the_dict[k] = coerce_value(context, container, value, report_issues)
 
-def instantiate_properties(context, container, properties, from_properties):
-    if not from_properties:
+def instantiate_dict(context, container, the_dict, from_dict):
+    if not from_dict:
         return
-    for property_name, value in from_properties.iteritems():
-        properties[property_name] = coerce_value(context, container, value)
-
-def instantiate_interfaces(context, container, interfaces, from_interfaces):
-    if not from_interfaces:
-        return
-    for interface_name, interface in from_interfaces.iteritems():
-        interfaces[interface_name] = interface.instantiate(context, container)
+    for name, value in from_dict.iteritems():
+        value = value.instantiate(context, container)
+        if value is not None:
+            the_dict[name] = value
 
 def dump_list_values(context, the_list, name):
     if not the_list:
@@ -67,13 +99,16 @@ def dump_properties(context, properties, name='Properties'):
         return
     puts('%s:' % name)
     with context.style.indent:
-        for property_name, value in properties.iteritems():
-            puts('%s = %s' % (context.style.property(property_name), context.style.literal(value)))
+        for property_name, prop in properties.iteritems():
+            if prop.type_name is not None:
+                puts('%s = %s (%s)' % (context.style.property(property_name), context.style.literal(prop.value), context.style.type(prop.type_name)))
+            else:
+                puts('%s = %s' % (context.style.property(property_name), context.style.literal(prop.value)))
 
-def dump_interfaces(context, interfaces):
+def dump_interfaces(context, interfaces, name='Interfaces'):
     if not interfaces:
         return
-    puts('Interfaces:')
+    puts('%s:' % name)
     with context.style.indent:
         for interface in interfaces.itervalues():
             interface.dump(context)

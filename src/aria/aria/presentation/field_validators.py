@@ -24,17 +24,17 @@ def type_validator(type_name, types_dict_name):
     Can be used with the :func:`field_validator` decorator.
     """
     
-    def fn(field, presentation, context):
+    def validator_fn(field, presentation, context):
         field._validate(presentation, context)
         
         # Make sure type exists
         value = getattr(presentation, field.name)
         if value is not None:
-            types_dict = getattr(context.presentation, types_dict_name) or {}
+            types_dict = getattr(context.presentation.presenter, types_dict_name) or {}
             if value not in types_dict:
-                report_issue_for_unknown_type(context, presentation, type_name, field.name, value)
+                report_issue_for_unknown_type(context, presentation, type_name, field.name)
         
-    return fn
+    return validator_fn
 
 def list_type_validator(type_name, types_dict_name):
     """
@@ -45,18 +45,18 @@ def list_type_validator(type_name, types_dict_name):
     Can be used with the :func:`field_validator` decorator.
     """
 
-    def fn(field, presentation, context):
+    def validator_fn(field, presentation, context):
         field._validate(presentation, context)
         
         # Make sure type exists
         values = getattr(presentation, field.name)
         if values is not None:
-            types_dict = getattr(context.presentation, types_dict_name) or {}
+            types_dict = getattr(context.presentation.presenter, types_dict_name) or {}
             for value in values:
                 if value not in types_dict:
-                    report_issue_for_unknown_type(context, presentation, type_name, field.name, value)
+                    report_issue_for_unknown_type(context, presentation, type_name, field.name)
         
-    return fn
+    return validator_fn
 
 def list_length_validator(length):
     """
@@ -67,7 +67,7 @@ def list_length_validator(length):
     Can be used with the :func:`field_validator` decorator.
     """
 
-    def fn(field, presentation, context):
+    def validator_fn(field, presentation, context):
         field._validate(presentation, context)
         
         # Make sure list has exactly the length
@@ -76,7 +76,7 @@ def list_length_validator(length):
             if len(values) != length:
                 context.validation.report('field "%s" does not have exactly %d elements in "%s"' % (field.name, length, presentation._fullname), locator=presentation._get_child_locator(field.name), level=Issue.FIELD)
         
-    return fn
+    return validator_fn
 
 def derived_from_validator(types_dict_name):
     """
@@ -85,12 +85,12 @@ def derived_from_validator(types_dict_name):
     Can be used with the :func:`field_validator` decorator.
     """
 
-    def fn(field, presentation, context):
+    def validator_fn(field, presentation, context):
         field._validate(presentation, context)
     
         value = getattr(presentation, field.name)
         if value is not None:
-            types_dict = getattr(context.presentation, types_dict_name) or {}
+            types_dict = getattr(context.presentation.presenter, types_dict_name) or {}
             
             # Make sure not derived from self
             if value == presentation._name:
@@ -115,4 +115,4 @@ def derived_from_validator(types_dict_name):
                         break
                     hierarchy.append(p._name)
 
-    return fn
+    return validator_fn

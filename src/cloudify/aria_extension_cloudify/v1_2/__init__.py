@@ -14,7 +14,15 @@
 # under the License.
 #
 
-from .misc import *
+from .presenter import CloudifyPresenter1_2
+from .templates import ServiceTemplate
+from .types import DataType
+from .misc import Plugin, PluginResource, UploadResources
 
 __all__ = (
-    'Instances',)
+    'CloudifyPresenter1_2',
+    'ServiceTemplate',
+    'DataType',
+    'Plugin',
+    'PluginResource',
+    'UploadResources')

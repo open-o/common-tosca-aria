@@ -17,6 +17,7 @@
 from .reader import Reader
 from .exceptions import ReaderSyntaxError
 from .locator import Locator
+from collections import OrderedDict
 import ruamel.yaml as yaml # @UnresolvedImport
 
 class YamlLocator(Locator):
@@ -24,19 +25,20 @@ class YamlLocator(Locator):
     Map for agnostic raw data read from YAML.
     """
     
-    def parse(self, node, location):
+    def parse(self, yaml_loader, node, location):
         if isinstance(node, yaml.SequenceNode):
             self.children = []
             for n in node.value:
-                m = YamlLocator(location, n.start_mark.line + 1, n.start_mark.column + 1)
-                self.children.append(m)
-                m.parse(n, location)
+                locator = YamlLocator(location, n.start_mark.line + 1, n.start_mark.column + 1)
+                self.children.append(locator)
+                locator.parse(yaml_loader, n, location)
         elif isinstance(node, yaml.MappingNode):
+            yaml_loader.flatten_mapping(node)
             self.children = {}
             for key, n in node.value:
-                m = YamlLocator(location, key.start_mark.line + 1, key.start_mark.column + 1)
-                self.children[key.value] = m
-                m.parse(n, location)
+                locator = YamlLocator(location, key.start_mark.line + 1, key.start_mark.column + 1)
+                self.children[key.value] = locator
+                locator.parse(yaml_loader, n, location)
 
 class YamlReader(Reader):
     """
@@ -46,15 +48,16 @@ class YamlReader(Reader):
     def read(self):
         data = self.load()
         try:
-            data = str(data)
+            data = unicode(data)
             yaml_loader = yaml.RoundTripLoader(data)
             node = yaml_loader.get_single_node()
-            if node is None:
-                return {}
             locator = YamlLocator(self.loader.location, 0, 0)
-            locator.parse(node, self.loader.location)
+            if node is None:
+                raw = OrderedDict()
+            else:
+                locator.parse(yaml_loader, node, self.loader.location)
+                raw = yaml_loader.construct_document(node)
             #locator.dump()
-            raw = yaml_loader.construct_document(node)
             setattr(raw, '_locator', locator)
             return raw
             

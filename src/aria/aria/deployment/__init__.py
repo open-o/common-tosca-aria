@@ -14,21 +14,35 @@
 # under the License.
 #
 
-from .context import *
-from .plan import *
-from .templates import *
-from .elements import *
-from .hierarchy import *
-from .ids import *
+from .exceptions import CannotEvaluateFunction
+from .context import IdType, DeploymentContext
+from .elements import Element, Template, Function, Parameter, Metadata, Interface, Operation, Artifact, GroupPolicy, GroupPolicyTrigger
+from .plan_elements import DeploymentPlan, Node, Capability, Relationship, Group, Policy, Mapping, Substitution
+from .template_elements import DeploymentTemplate, NodeTemplate, Requirement, CapabilityTemplate, RelationshipTemplate, GroupTemplate, PolicyTemplate, MappingTemplate, SubstitutionTemplate
+from .types import TypeHierarchy, Type, RelationshipType
 
 __all__ = (
+    'CannotEvaluateFunction',
+    'IdType',
     'DeploymentContext',
+    'Element',
+    'Template',
+    'Function',
+    'Parameter',
+    'Metadata',
+    'Interface',
+    'Operation',
+    'Artifact',
+    'GroupPolicy',
+    'GroupPolicyTrigger',
     'DeploymentPlan',
     'Node',
     'Capability',
     'Relationship',
     'Group',
     'Policy',
+    'Mapping',
+    'Substitution',
     'DeploymentTemplate',
     'NodeTemplate',
     'Requirement',
@@ -36,11 +50,8 @@ __all__ = (
     'RelationshipTemplate',
     'GroupTemplate',
     'PolicyTemplate',
-    'Element',
-    'Template',
-    'Function',
-    'Interface',
-    'Operation',
+    'MappingTemplate',
+    'SubstitutionTemplate',
     'TypeHierarchy',
     'Type',
-    'generate_id')
+    'RelationshipType')

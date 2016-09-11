@@ -14,35 +14,35 @@
 # under the License.
 #
 
-from aria.parsing import DefaultParser
+from aria import install_aria_extensions
+from aria.consumption import ConsumptionContext, ConsumerChain, Presentation, Validation, Template, Plan
+from aria.loading import UriLocation, LiteralLocation
+from aria_extension_cloudify import ClassicPlan
 
-def parse_from_path(dsl_file_path,
-                    resources_base_url=None,
-                    resolver=None,
-                    validate_version=True,
-                    additional_resource_sources=()):
-    print '!!! parse_from_path'
-    print dsl_file_path
-    #print resources_base_url
-    #print resolver
-    #print validate_version
-    #print additional_resource_sources
+install_aria_extensions()
+
+def parse_from_path(dsl_file_path, resources_base_url=None, additional_resource_sources=(), validate_version=True, **legacy):
+    paths = [resources_base_url] if resources_base_url is not None else []
+    paths += additional_resource_sources
+    return _parse(UriLocation(dsl_file_path), paths, validate_version)
+
+def parse(dsl_string, resources_base_url=None, validate_version=True, **legacy):
+    paths = [resources_base_url] if resources_base_url is not None else []
+    return _parse(LiteralLocation(dsl_string), paths, validate_version)
+
+def _parse(location, search_paths=None, validate=True):
+    context = ConsumptionContext()
+    context.presentation.location = location
     
-    parser = DefaultParser(dsl_file_path)
-    #presentation = parser.parse()
-    presentation, issues = parser.validate()
-    if issues:
-        print 'Validation issues:'
-        for i in issues:
-            print ' ', str(i)
-    return presentation
+    if search_paths:
+        context.loading.search_paths += search_paths
     
-def parse(dsl_string,
-          resources_base_url=None,
-          resolver=None,
-          validate_version=True):
-    print '!!! parse'
-    print dsl_string
-    print resources_base_url
-    print resolver
-    print validate_version
+    if validate:
+        consumer = ConsumerChain(context, (Presentation, Validation, Template, Plan, ClassicPlan))
+    else:
+        consumer = ConsumerChain(context, (Presentation,))
+
+    consumer.consume()    
+    context.validation.dump_issues()
+    
+    return context

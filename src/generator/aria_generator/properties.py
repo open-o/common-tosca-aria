@@ -115,7 +115,7 @@ def validated_property(cls, default=None, required=False, status='supported'):
     """
     Function decorator for primitive fields.
     
-    The function must be a method in a class decorated with :func:`has\_validated\_properties`.
+    The function must be a method in a class decorated with :func:`has_validated_properties`.
     """
     def decorator(fn):
         return Prop(fn=fn, cls=cls, default=default, required=required, status=status)

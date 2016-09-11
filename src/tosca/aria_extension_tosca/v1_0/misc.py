@@ -17,10 +17,10 @@
 from .presentation import ToscaPresentation
 from .field_validators import constraint_clause_field_validator, constraint_clause_in_range_validator, constraint_clause_valid_values_validator, constraint_clause_pattern_validator, data_type_validator
 from .utils.data_types import get_data_type, get_data_type_value, get_property_constraints, apply_constraint_to_value
+from .utils.substitution_mappings import validate_subtitution_mappings_requirement, validate_subtitution_mappings_capability
 from aria import dsl_specification
-from aria.utils import cachedmethod
-from aria.presentation import AsIsPresentation, has_fields, short_form_field, primitive_field, primitive_list_field, object_field, object_list_field, field_validator
-from clint.textui import puts
+from aria.utils import cachedmethod, puts
+from aria.presentation import AsIsPresentation, has_fields, allow_unknown_fields, short_form_field, primitive_field, primitive_list_field, primitive_dict_unknown_fields, object_field, object_list_field, object_dict_field, field_validator, type_validator
 
 @dsl_specification('3.5.1', 'tosca-simple-profile-1.0')
 class Description(AsIsPresentation):
@@ -31,6 +31,7 @@ class Description(AsIsPresentation):
     def _dump(self, context):
         puts(context.style.meta(self.value))
 
+@allow_unknown_fields
 @has_fields
 @dsl_specification('3.9.3.2', 'tosca-simple-profile-1.0')
 class MetaData(ToscaPresentation):
@@ -53,6 +54,12 @@ class MetaData(ToscaPresentation):
     def template_version(self):
         """
         This optional metadata keyname can be used to declare a domain specific version of the service template as a single-line string value.
+        """
+
+    @primitive_dict_unknown_fields()
+    def custom(self):
+        """
+        :rtype: dict
         """
 
 @has_fields
@@ -288,3 +295,69 @@ class OperationImplementation(ToscaPresentation):
         
         :rtype: list of str
         """
+
+class SubstitutionMappingsRequirement(AsIsPresentation):
+    @property
+    @cachedmethod
+    def node_template(self):
+        return str(self._raw[0])
+
+    @property
+    @cachedmethod
+    def requirement(self):
+        return str(self._raw[1])
+    
+    def _validate(self, context):
+        super(SubstitutionMappingsRequirement, self)._validate(context)
+        validate_subtitution_mappings_requirement(context, self)
+
+class SubstitutionMappingsCapability(AsIsPresentation):
+    @property
+    @cachedmethod
+    def node_template(self):
+        return str(self._raw[0])
+
+    @property
+    @cachedmethod
+    def capability(self):
+        return str(self._raw[1])
+
+    def _validate(self, context):
+        super(SubstitutionMappingsCapability, self)._validate(context)
+        validate_subtitution_mappings_capability(context, self)
+
+@has_fields
+@dsl_specification('2.10', 'tosca-simple-profile-1.0')
+class SubstitutionMappings(ToscaPresentation):
+    @field_validator(type_validator('node type', 'node_types'))
+    @primitive_field(str, required=True)
+    def node_type(self):
+        """
+        :rtype: str
+        """
+
+    @object_dict_field(SubstitutionMappingsRequirement)
+    def requirements(self):
+        """
+        :rtype: dict of str, :class:`SubstitutionMappingsRequirement`        
+        """
+
+    @object_dict_field(SubstitutionMappingsCapability)
+    def capabilities(self):
+        """
+        :rtype: dict of str, :class:`SubstitutionMappingsCapability`        
+        """
+        
+    @cachedmethod
+    def _get_type(self, context):
+        return context.presentation.presenter.node_types.get(self.node_type) if context.presentation.presenter.node_types is not None else None
+
+    def _validate(self, context):
+        super(SubstitutionMappings, self)._validate(context)
+        self._get_type(context)
+
+    def _dump(self, context):
+        self._dump_content(context, (
+            'node_type',
+            'requirements',
+            'capabilities'))

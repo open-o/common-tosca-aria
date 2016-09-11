@@ -15,40 +15,53 @@
 #
 
 from .. import install_aria_extensions
+from ..consumption import ConsumerChain, Presentation, Validation, Yaml, Template, Inputs, Plan, Types
 from ..utils import print_exception, import_fullname
-from ..consumption import ConsumptionContext
-from .utils import CommonArgumentParser, create_parser_ns
+from .utils import CommonArgumentParser, create_context_from_namespace
 
 class ArgumentParser(CommonArgumentParser):
     def __init__(self):
         super(ArgumentParser, self).__init__(description='CLI', prog='aria')
         self.add_argument('uri', help='URI or file path to profile')
-        self.add_argument('consumer', nargs='?', default='aria.consumption.Plan', help='consumer class')
+        self.add_argument('consumer', nargs='?', default='plan', help='consumer class name (full class path or short name)')
 
 def main():
     try:
-        args, unknown_args = ArgumentParser().parse_known_args()
         
-        consumer_class_name = args.consumer
-        if '.' not in consumer_class_name:
-            consumer_class_name = consumer_class_name.title()
+        args, unknown_args = ArgumentParser().parse_known_args()
         
         install_aria_extensions()
 
-        consumer_class = import_fullname(consumer_class_name, ['aria.consumption'])
-        parser = create_parser_ns(args)
-
-        context = ConsumptionContext()
+        context = create_context_from_namespace(args)
         context.args = unknown_args
         
-        parser.parse_and_validate(context)
+        consumer = ConsumerChain(context, (Presentation, Validation))
         
-        if context.validation.dump_issues():
-            exit(0)
-
-        consumer_class(context).consume()
+        consumer_class_name = args.consumer
+        dumper = None
+        if consumer_class_name == 'presentation':
+            dumper = consumer.consumers[0]
+        elif consumer_class_name == 'yaml':
+            consumer.append(Yaml)
+        elif consumer_class_name == 'template':
+            consumer.append(Template)
+        elif consumer_class_name == 'plan':
+            consumer.append(Template, Inputs, Plan)
+        elif consumer_class_name == 'types':
+            consumer.append(Template, Inputs, Plan, Types)
+        else:
+            consumer.append(Template, Inputs, Plan)
+            consumer.append(import_fullname(consumer_class_name))
+            
+        if dumper is None:
+            # Default to last consumer
+            dumper = consumer.consumers[-1]
         
-        context.validation.dump_issues()
+        consumer.consume()
+        
+        if not context.validation.dump_issues():
+            dumper.dump()
+            
     except Exception as e:
         print_exception(e)
 

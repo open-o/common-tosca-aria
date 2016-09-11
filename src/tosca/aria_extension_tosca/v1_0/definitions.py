@@ -256,7 +256,7 @@ class InterfaceDefinition(ToscaPresentation):
 
     @cachedmethod
     def _get_type(self, context):
-        return context.presentation.interface_types.get(self.type) if context.presentation.interface_types is not None else None
+        return context.presentation.presenter.interface_types.get(self.type) if context.presentation.presenter.interface_types is not None else None
 
     @cachedmethod
     def _get_inputs(self, context):
@@ -294,7 +294,7 @@ class RelationshipDefinition(ToscaPresentation):
 
     @cachedmethod
     def _get_type(self, context):
-        return context.presentation.relationship_types.get(self.type) if context.presentation.relationship_types is not None else None
+        return context.presentation.presenter.relationship_types.get(self.type) if context.presentation.presenter.relationship_types is not None else None
 
 @short_form_field('capability')    
 @has_fields
@@ -345,11 +345,11 @@ class RequirementDefinition(ToscaPresentation):
 
     @cachedmethod
     def _get_type(self, context):
-        return context.presentation.capability_types.get(self.capability) if context.presentation.capability_types is not None else None
+        return context.presentation.presenter.capability_types.get(self.capability) if context.presentation.presenter.capability_types is not None else None
 
     @cachedmethod
     def _get_node_type(self, context):
-        return context.presentation.node_types.get(self.node)
+        return context.presentation.presenter.node_types.get(self.node)
 
 @short_form_field('type')
 @has_fields
@@ -418,7 +418,7 @@ class CapabilityDefinition(ToscaPresentation):
 
     @cachedmethod
     def _get_type(self, context):
-        return context.presentation.capability_types.get(self.type) if context.presentation.capability_types is not None else None
+        return context.presentation.presenter.capability_types.get(self.type) if context.presentation.presenter.capability_types is not None else None
     
     @cachedmethod
     def _get_parent(self, context):

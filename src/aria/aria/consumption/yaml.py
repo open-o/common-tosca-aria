@@ -24,10 +24,10 @@ class Yaml(Consumer):
     Emits the presentation's raw data as YAML.
     """
     
-    def consume(self):
+    def dump(self):
         try:
             init_yaml()
-            text = yaml.dump(self.context.presentation._raw, Dumper=yaml.RoundTripDumper)
+            text = yaml.dump(self.context.presentation.presenter._raw, Dumper=yaml.RoundTripDumper)
             self.context.out.write(text)
         except Exception as e:
             raise ConsumerError('YamlWriter: %s' % e, cause=e)

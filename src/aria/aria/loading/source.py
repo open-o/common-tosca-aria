@@ -15,10 +15,10 @@
 #
 
 from .exceptions import LoaderNotFoundError
-from .literal import LiteralLocation, LiteralLoader
+from .location import LiteralLocation, UriLocation
+from .literal import LiteralLoader
 from .file import FileTextLoader
 from .uri import UriTextLoader
-import urlparse, os.path
 
 class LoaderSource(object):
     """
@@ -30,41 +30,24 @@ class LoaderSource(object):
     in a :class:`LiteralLoader`.
     """
     
-    def get_loader(self, location, origin_location):
+    def get_loader(self, context, location, origin_location):
         if isinstance(location, LiteralLocation):
-            return LiteralLoader(location.value)
+            return LiteralLoader(location)
+        
         raise LoaderNotFoundError('location: %s' % location)
 
 class DefaultLoaderSource(LoaderSource):
     """
     The default ARIA loader source will generate a :class:`UriTextLoader` for
     locations that are non-file URIs, and a :class:`FileTextLoader` for file
-    URIs and other strings.
-    
-    If :class:`FileTextLoader` is used, a base path will be extracted from
-    origin_location.
+    URIs.
     """
     
-    def get_loader(self, location, origin_location):
-        if isinstance(location, basestring):
-            url = urlparse.urlparse(location)
-            if (not url.scheme) or (url.scheme == 'file'):
-                # It's a file
-                if url.scheme == 'file':
-                    location = url.path
-                paths = []
-
-                # Check origin_location
-                if isinstance(origin_location, basestring):
-                    url = urlparse.urlparse(origin_location)
-                    if (not url.scheme) or (url.scheme == 'file'):
-                        # It's a file, so include its base path
-                        base_path = os.path.dirname(url.path)
-                        paths = [base_path]
-                
-                return FileTextLoader(self, location, paths=paths)
+    def get_loader(self, context, location, origin_location):
+        if isinstance(location, UriLocation):
+            if location.as_file is not None:
+                return FileTextLoader(context, location, origin_location)
             else:
-                # It's a URL
-                return UriTextLoader(self, location)
+                return UriTextLoader(location)
             
-        return super(DefaultLoaderSource, self).get_loader(location, origin_location)
+        return super(DefaultLoaderSource, self).get_loader(context, location, origin_location)

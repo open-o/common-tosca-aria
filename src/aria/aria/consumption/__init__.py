@@ -14,30 +14,29 @@
 # under the License.
 #
 
-from .exceptions import *
-from .context import *
-from .consumer import *
-from .style import *
-from .validate import *
-from .yaml import *
-from .presentation import *
-from .template import *
-from .plan import *
-from .types import *
-
-MODULES = (
-    'validation')
+from .exceptions import ConsumerError
+from .context import ConsumptionContext
+from .style import Style
+from .consumer import Consumer, ConsumerChain
+from .presentation import Presentation
+from .validation import ValidationContext, Validation
+from .yaml import Yaml
+from .template import Template
+from .inputs import Inputs
+from .plan import Plan
+from .types import Types
 
 __all__ = (
-    'MODULES',
     'ConsumerError',
-    'ValidationContext',
     'ConsumptionContext',
     'Style',
     'Consumer',
-    'Validate',
-    'Yaml',
+    'ConsumerChain',
     'Presentation',
+    'ValidationContext',
+    'Validation',
+    'Yaml',
     'Template',
+    'Inputs',
     'Plan',
     'Types')

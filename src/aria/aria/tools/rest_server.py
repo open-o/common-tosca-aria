@@ -14,8 +14,9 @@
 # under the License.
 #
 
+from ..utils import puts, colored
 import sys, os, re, shutil, json, urllib2, BaseHTTPServer
-from clint.textui import puts, colored
+from collections import OrderedDict
 
 # Fix issues with decoding HTTP responses
 reload(sys)
@@ -26,8 +27,8 @@ class Config(object):
         self.port = 8080
         self.routes = {}
         self.static_root = '.'
-        self.json_encoder = json.JSONEncoder
-        self.json_decoder = json.JSONDecoder
+        self.json_encoder = json.JSONEncoder(ensure_ascii=False, separators=(',',':'))
+        self.json_decoder = json.JSONDecoder(object_pairs_hook=OrderedDict)
 
 def rest_call_json(url, payload=None, with_payload_method='PUT'):
     """
@@ -64,6 +65,7 @@ class MethodRequest(urllib2.Request):
 class RESTRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def __init__(self, config, *args, **kwargs):
         self.config = config
+        self.handled = False
         return BaseHTTPServer.BaseHTTPRequestHandler.__init__(self, *args, **kwargs)
     
     def do_HEAD(self):
@@ -87,7 +89,7 @@ class RESTRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         return payload
  
     def get_json_payload(self):
-        return json.loads(self.get_payload(), cls=self.config.json_decoder)
+        return self.config.json_decoder.decode(self.get_payload())
         
     def handle_method(self, method):
         route = self.get_route()
@@ -124,18 +126,24 @@ class RESTRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                         self.wfile.write('Only GET is supported\n')
                 else:
                     if method in route:
-                        content = route[method](self)
-                        if content is not None:
-                            self.send_response(200)
-                            if 'media_type' in route:
-                                self.send_header('Content-type', route['media_type'])
+                        try:
+                            content = route[method](self)
+                            if not self.handled:
+                                if content is not None:
+                                    self.send_response(200)
+                                    if 'media_type' in route:
+                                        self.send_header('Content-type', route['media_type'])
+                                    self.end_headers()
+                                    if method != 'DELETE':
+                                        self.wfile.write(self.config.json_encoder.encode(content))
+                                else:
+                                    self.send_response(404)
+                                    self.end_headers()
+                                    self.wfile.write('Not found\n')
+                        except Exception as e:
+                            self.send_response(500)
                             self.end_headers()
-                            if method != 'DELETE':
-                                self.wfile.write(json.dumps(content, cls=self.config.json_encoder))
-                        else:
-                            self.send_response(404)
-                            self.end_headers()
-                            self.wfile.write('Not found\n')
+                            self.wfile.write('Internal error: %s\n' % e)
                     else:
                         self.send_response(405)
                         self.end_headers()

@@ -16,7 +16,7 @@
 
 from aria import DSL_SPECIFICATION_PACKAGES
 from aria.presentation import PRESENTER_CLASSES
-from aria.loading import FILE_LOADER_PATHS
+from aria.loading import FILE_LOADER_SEARCH_PATHS
 from .v1_0 import ToscaSimplePresenter1_0
 import os.path
 
@@ -28,8 +28,8 @@ def install_aria_extension():
     DSL_SPECIFICATION_PACKAGES.append('aria_extension_tosca')
     
     # Imports
-    the_dir = os.path.dirname(os.path.dirname(__file__))
-    FILE_LOADER_PATHS.append(os.path.join(the_dir, 'profiles'))
+    the_dir = os.path.dirname(__file__)
+    FILE_LOADER_SEARCH_PATHS.append(os.path.join(the_dir, 'profiles'))
 
 MODULES = (
     'v1_0',)

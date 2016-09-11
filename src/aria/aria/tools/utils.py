@@ -15,36 +15,44 @@
 #
 
 from .. import VERSION
-from ..utils import import_fullname
-from argparse import ArgumentParser
+from ..consumption import ConsumptionContext
+from ..loading import UriLocation, FILE_LOADER_SEARCH_PATHS
+from ..utils import import_fullname, ArgumentParser
 
 class BaseArgumentParser(ArgumentParser):
     def __init__(self, description, **kwargs):
         super(BaseArgumentParser, self).__init__(description='ARIA version %s %s' % (VERSION, description), **kwargs)
-
+    
 class CommonArgumentParser(BaseArgumentParser):
     def __init__(self, description, **kwargs):
         super(CommonArgumentParser, self).__init__(description='ARIA version %s %s' % (VERSION, description), **kwargs)
-        self.add_argument('--parser', default='aria.parsing.DefaultParser', help='parser class')
         self.add_argument('--loader-source', default='aria.loading.DefaultLoaderSource', help='loader source class for the parser')
         self.add_argument('--reader-source', default='aria.reading.DefaultReaderSource', help='reader source class for the parser')
         self.add_argument('--presenter-source', default='aria.presentation.DefaultPresenterSource', help='presenter source class for the parser')
         self.add_argument('--presenter', help='force use of this presenter class in parser')
+        self.add_argument('--path', nargs='*', help='search paths for imports')
+        self.add_argument('--debug', action='store_true', help='print debug info')
 
-def create_parser_ns(ns, **kwargs):
+    def parse_known_args(self, args=None, namespace=None):
+        namespace, args = super(CommonArgumentParser, self).parse_known_args(args, namespace)
+        
+        if namespace.path:
+            for path in namespace.path:
+                FILE_LOADER_SEARCH_PATHS.append(path)
+        
+        return namespace, args
+
+def create_context_from_namespace(ns, **kwargs):
     args = vars(ns).copy()
     args.update(kwargs)
-    return create_parser(**args)
+    return create_context(**args)
 
-def create_parser(uri, parser, loader_source, reader_source, presenter_source, presenter, **kwargs):
-    parser_class = import_fullname(parser, ['aria.parsing'])
-    loader_source_class = import_fullname(loader_source, ['aria.loading'])
-    reader_source_class = import_fullname(reader_source, ['aria.reading'])
-    presenter_source_class = import_fullname(presenter_source, ['aria.presentation'])
-    presenter_class = import_fullname(presenter, ['aria.presentation'])
-
-    return parser_class(location=uri,
-        loader_source=loader_source_class(),
-        reader_source=reader_source_class(),
-        presenter_source=presenter_source_class(),
-        presenter_class=presenter_class)
+def create_context(uri, loader_source, reader_source, presenter_source, presenter, debug, **kwargs):
+    context = ConsumptionContext()
+    context.loading.loader_source = import_fullname(loader_source)()
+    context.reading.reader_source = import_fullname(reader_source)()
+    context.presentation.location=UriLocation(uri) if isinstance(uri, basestring) else uri
+    context.presentation.presenter_source = import_fullname(presenter_source)()
+    context.presentation.presenter_class = import_fullname(presenter)
+    context.presentation.print_exceptions = debug
+    return context

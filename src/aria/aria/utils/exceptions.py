@@ -14,7 +14,7 @@
 # under the License.
 #
 
-from clint.textui import puts, colored, indent
+from .console import puts, colored, indent
 import sys, linecache 
 
 def print_exception(e, full=True, cause=False, tb=None):
@@ -22,7 +22,7 @@ def print_exception(e, full=True, cause=False, tb=None):
     Prints the exception with nice colors and such.
     """
     def format_heading(e):
-        return '%s%s: %s' % (colored.red('Caused by ') if cause else '', colored.red(e.__class__.__name__, bold=True), colored.red(str(e)))
+        return '%s%s: %s' % (colored.red('Caused by ') if cause else '', colored.red(e.__class__.__name__, bold=True), colored.red(e))
 
     puts(format_heading(e))
     if full:
