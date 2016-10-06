@@ -15,16 +15,15 @@
 #
 
 from .definitions import PropertyDefinition, WorkflowDefinition
-from .assignments import PropertyAssignment, InterfaceAssignment, PolicyAssignment
-from .types import NodeType, RelationshipType, PolicyType, PolicyTrigger
+from .assignments import PropertyAssignment, InterfaceAssignment, GroupPolicyAssignment
+from .types import NodeType, RelationshipType, PolicyType, GroupPolicyTriggerType
 from .misc import Description, Output, Plugin, Instances
-from .field_validators import node_templates_or_groups_validator
-from .utils.properties import get_assigned_and_defined_property_values, get_parameter_values
-from .utils.interfaces import get_template_interfaces
-from .utils.node_templates import get_node_template_scalable
-from .utils.relationships import get_relationship_assigned_and_defined_property_values
+from .modeling.properties import get_assigned_and_defined_property_values, get_parameter_values
+from .modeling.interfaces import get_template_interfaces
+from .modeling.relationships import get_relationship_assigned_and_defined_property_values
+from ..modeling.node_templates import get_node_template_scalable
 from aria import dsl_specification
-from aria.presentation import Presentation, has_fields, primitive_field, primitive_list_field, object_field, object_list_field, object_dict_field, field_validator, type_validator
+from aria.presentation import Presentation, has_fields, primitive_field, primitive_list_field, object_field, object_list_field, object_dict_field, field_validator, type_validator, list_type_validator
 from aria.utils import ReadOnlyDict, cachedmethod
 
 @has_fields
@@ -47,7 +46,7 @@ class RelationshipTemplate(Presentation):
         :rtype: :class:`Description`
         """
 
-    @field_validator(type_validator('relationship', 'relationship_types'))
+    @field_validator(type_validator('relationship', 'relationships'))
     @primitive_field(str, required=True)
     def type(self):
         """
@@ -91,7 +90,7 @@ class RelationshipTemplate(Presentation):
 
     @cachedmethod
     def _get_type(self, context):
-        return context.presentation.presenter.relationship_types.get(self.type) if context.presentation.presenter.relationship_types is not None else None
+        return context.presentation.get_from_dict('service_template', 'relationships', self.type)
 
     @cachedmethod
     def _get_property_values(self, context):
@@ -175,7 +174,7 @@ class NodeTemplate(Presentation):
     
     @cachedmethod
     def _get_type(self, context):
-        return context.presentation.presenter.node_types.get(self.type) if context.presentation.presenter.node_types is not None else None
+        return context.presentation.get_from_dict('service_template', 'node_types', self.type)
 
     @cachedmethod
     def _get_property_values(self, context):
@@ -199,29 +198,28 @@ class NodeTemplate(Presentation):
 @dsl_specification('groups', 'cloudify-1.0')
 @dsl_specification('groups', 'cloudify-1.1')
 @dsl_specification('groups', 'cloudify-1.2')
-@dsl_specification('groups', 'cloudify-1.3')
-class GroupDefinition(Presentation):
+class GroupTemplate(Presentation):
     """
-    Groups provide a way of configuring shared behavior for different sets of node_templates.
+    Groups provide a way of configuring shared behavior for different sets of :code:`node_templates`.
     
-    See the `Cloudify DSL v1.3 specification <http://docs.getcloudify.org/3.4.0/blueprints/spec-groups/>`__.
+    See the `Cloudify DSL v1.2 specification <http://docs.getcloudify.org/3.3.1/blueprints/spec-groups/>`__.
     """
 
-    @field_validator(node_templates_or_groups_validator)
+    @field_validator(list_type_validator('node template', 'node_templates'))
     @primitive_list_field(str, required=True)
     def members(self):
         """
-        A list of group members. Members are node template names or other group names. 
+        A list of group members. Members are node template names. 
         
         :rtype: list of str
         """
 
-    @object_dict_field(PolicyAssignment)
+    @object_dict_field(GroupPolicyAssignment)
     def policies(self):
         """
         A dict of policies. 
         
-        :rtype: dict of str, :class:`PolicyAssignment`
+        :rtype: dict of str, :class:`GroupPolicyAssignment`
         """
 
 @has_fields
@@ -318,22 +316,22 @@ class ServiceTemplate(Presentation):
         :rtype: dict of str, :class:`WorkflowDefinition`
         """
 
-    @object_dict_field(GroupDefinition)
+    @object_dict_field(GroupTemplate)
     def groups(self):
         """
-        :rtype: dict of str, :class:`GroupDefinition`
+        :rtype: dict of str, :class:`GroupTemplate`
         """
 
     @object_dict_field(PolicyType)
     def policy_types(self):
         """
-        :rtype: dict of str, :class:`PolicyType`
+        :rtype: dict of str, :class:`GroupPolicyType`
         """
 
-    @object_dict_field(PolicyTrigger)
+    @object_dict_field(GroupPolicyTriggerType)
     def policy_triggers(self):
         """
-        :rtype: dict of str, :class:`PolicyTrigger`
+        :rtype: dict of str, :class:`GroupPolicyTriggerType`
         """
 
     @cachedmethod
@@ -348,7 +346,6 @@ class ServiceTemplate(Presentation):
         super(ServiceTemplate, self)._validate(context)
         self._get_input_values(context)
         self._get_output_values(context)
-
 
     def _dump(self, context):
         self._dump_content(context, (

@@ -14,27 +14,27 @@
 # under the License.
 #
 
-from .presentation import ToscaPresentation
 from .misc import Description, MetaData, Repository, Import, SubstitutionMappings
 from .definitions import ParameterDefinition
 from .assignments import PropertyAssignment, AttributeAssignment, RequirementAssignment, CapabilityAssignment, InterfaceAssignment, ArtifactAssignment
 from .types import ArtifactType, DataType, CapabilityType, InterfaceType, RelationshipType, NodeType, GroupType, PolicyType
 from .filters import NodeFilter
-from .field_validators import copy_validator, policy_targets_validator
-from .utils.properties import get_assigned_and_defined_property_values, get_parameter_values
-from .utils.interfaces import get_template_interfaces
-from .utils.requirements import get_template_requirements
-from .utils.capabilities import get_template_capabilities
-from .utils.artifacts import get_inherited_artifact_definitions
-from .utils.policies import get_policy_targets
-from .utils.copy import get_default_raw_from_copy
+from .presentation.extensible import ExtensiblePresentation
+from .presentation.field_validators import copy_validator, policy_targets_validator
+from .modeling.properties import get_assigned_and_defined_property_values, get_parameter_values
+from .modeling.interfaces import get_template_interfaces
+from .modeling.requirements import get_template_requirements
+from .modeling.capabilities import get_template_capabilities
+from .modeling.artifacts import get_inherited_artifact_definitions
+from .modeling.policies import get_policy_targets
+from .modeling.copy import get_default_raw_from_copy
 from aria import dsl_specification
 from aria.utils import ReadOnlyDict, ReadOnlyList, cachedmethod
 from aria.presentation import has_fields, primitive_field, primitive_list_field, object_field, object_list_field, object_dict_field, object_sequenced_list_field, field_validator, type_validator, list_type_validator
 
 @has_fields
 @dsl_specification('3.7.3', 'tosca-simple-profile-1.0')
-class NodeTemplate(ToscaPresentation):
+class NodeTemplate(ExtensiblePresentation):
     """
     A Node Template specifies the occurrence of a manageable software component as part of an application's topology model which is defined in a TOSCA Service Template. A Node template is an instance of a specified Node Type and can provide customized properties, constraints or operations which override the defaults provided by its Node Type and its implementations.
     
@@ -137,7 +137,7 @@ class NodeTemplate(ToscaPresentation):
     
     @cachedmethod
     def _get_type(self, context):
-        return context.presentation.presenter.node_types.get(self.type) if context.presentation.presenter.node_types is not None else None
+        return context.presentation.get_from_dict('service_template', 'node_types', self.type)
 
     @cachedmethod
     def _get_property_values(self, context):
@@ -183,7 +183,7 @@ class NodeTemplate(ToscaPresentation):
 
 @has_fields
 @dsl_specification('3.7.4', 'tosca-simple-profile-1.0')
-class RelationshipTemplate(ToscaPresentation):
+class RelationshipTemplate(ExtensiblePresentation):
     """
     A Relationship Template specifies the occurrence of a manageable relationship between node templates as part of an application's topology model that is defined in a TOSCA Service Template. A Relationship template is an instance of a specified Relationship Type and can provide customized properties, constraints or operations which override the defaults provided by its Relationship Type and its implementations.
     
@@ -248,7 +248,7 @@ class RelationshipTemplate(ToscaPresentation):
 
     @cachedmethod
     def _get_type(self, context):
-        return context.presentation.presenter.relationship_types.get(self.type) if context.presentation.presenter.relationship_types is not None else None
+        return context.presentation.get_from_dict('service_template', 'relationship_types', self.type)
 
     @cachedmethod
     def _get_property_values(self, context):
@@ -274,7 +274,7 @@ class RelationshipTemplate(ToscaPresentation):
 
 @has_fields
 @dsl_specification('3.7.5', 'tosca-simple-profile-1.0')
-class GroupDefinition(ToscaPresentation):
+class GroupTemplate(ExtensiblePresentation):
     """
     A group definition defines a logical grouping of node templates, typically for management purposes, but is separate from the application's topology template.
     
@@ -306,7 +306,7 @@ class GroupDefinition(ToscaPresentation):
         :rtype: dict of str, :class:`PropertyAssignment`
         """
 
-    @field_validator(list_type_validator('node template', 'node_templates'))
+    @field_validator(list_type_validator('node template', 'topology_template', 'node_templates'))
     @primitive_list_field(str)
     def members(self):
         """
@@ -325,7 +325,7 @@ class GroupDefinition(ToscaPresentation):
 
     @cachedmethod
     def _get_type(self, context):
-        return context.presentation.presenter.group_types.get(self.type) if context.presentation.presenter.group_types is not None else None
+        return context.presentation.get_from_dict('service_template', 'group_types', self.type)
 
     @cachedmethod
     def _get_property_values(self, context):
@@ -336,13 +336,13 @@ class GroupDefinition(ToscaPresentation):
         return ReadOnlyDict(get_template_interfaces(context, self, 'group definition'))
     
     def _validate(self, context):
-        super(GroupDefinition, self)._validate(context)
+        super(GroupTemplate, self)._validate(context)
         self._get_property_values(context)
         self._get_interfaces(context)
 
 @has_fields
 @dsl_specification('3.7.6', 'tosca-simple-profile-1.0')
-class PolicyDefinition(ToscaPresentation):
+class PolicyTemplate(ExtensiblePresentation):
     """
     A policy definition defines a policy that can be associated with a TOSCA topology or top-level entity definition (e.g., group definition, node template, etc.).
     
@@ -385,7 +385,7 @@ class PolicyDefinition(ToscaPresentation):
 
     @cachedmethod
     def _get_type(self, context):
-        return context.presentation.presenter.policy_types.get(self.type) if context.presentation.presenter.policy_types is not None else None
+        return context.presentation.get_from_dict('service_template', 'policy_types', self.type)
 
     @cachedmethod
     def _get_property_values(self, context):
@@ -397,12 +397,12 @@ class PolicyDefinition(ToscaPresentation):
         return ReadOnlyList(node_templates), ReadOnlyList(groups)
 
     def _validate(self, context):
-        super(PolicyDefinition, self)._validate(context)
+        super(PolicyTemplate, self)._validate(context)
         self._get_property_values(context)
 
 @has_fields
 @dsl_specification('3.8', 'tosca-simple-profile-1.0')
-class TopologyTemplate(ToscaPresentation):
+class TopologyTemplate(ExtensiblePresentation):
     """
     This section defines the topology template of a cloud application. The main ingredients of the topology template are node templates representing components of the application and relationship templates representing links between the components. These elements are defined in the nested node_templates section and the nested relationship_templates sections, respectively. Furthermore, a topology template allows for defining input parameters, output parameters as well as grouping of node templates.
     
@@ -441,20 +441,20 @@ class TopologyTemplate(ToscaPresentation):
         :rtype: dict of str, :class:`RelationshipTemplate`
         """
 
-    @object_dict_field(GroupDefinition)
+    @object_dict_field(GroupTemplate)
     def groups(self):
         """
         An optional list of Group definitions whose members are node templates defined within this same Topology Template.
         
-        :class:`GroupDefinition`
+        :class:`GroupTemplate`
         """
 
-    @object_dict_field(PolicyDefinition)
+    @object_dict_field(PolicyTemplate)
     def policies(self):
         """
         An optional list of Policy definitions for the Topology Template.
         
-        :rtype: dict of str, :class:`PolicyDefinition`
+        :rtype: dict of str, :class:`PolicyTemplate`
         """
 
     @object_dict_field(ParameterDefinition)
@@ -499,7 +499,7 @@ class TopologyTemplate(ToscaPresentation):
 
 @has_fields
 @dsl_specification('3.9', 'tosca-simple-profile-1.0')
-class ServiceTemplate(ToscaPresentation):
+class ServiceTemplate(ExtensiblePresentation):
     """
     See the `TOSCA Simple Profile v1.0 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/csprd02/TOSCA-Simple-Profile-YAML-v1.0-csprd02.html#DEFN_ELEMENT_SERVICE_TEMPLATE>`__.
     """

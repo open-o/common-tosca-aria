@@ -14,11 +14,12 @@
 # under the License.
 #
 
-from .utils.data_types import coerce_to_data_type_class, report_issue_for_bad_format, coerce_value
+from .modeling.data_types import coerce_to_data_type_class, report_issue_for_bad_format, coerce_value
 from aria import dsl_specification
 from aria.utils import StrictDict
 from functools import total_ordering
 from datetime import datetime, tzinfo, timedelta
+from collections import OrderedDict
 import re
 
 class Timezone(tzinfo):
@@ -104,6 +105,10 @@ class Timestamp(object):
     def as_datetime_utc(self):
         return self.value.astimezone(UTC)
     
+    @property
+    def as_raw(self):
+        return self.value
+    
     def __str__(self):
         dt = self.as_datetime_utc
         return '%s%sZ' % (dt.strftime(Timestamp.CANONICAL), Timestamp._fraction_as_str(dt))
@@ -112,6 +117,8 @@ class Timestamp(object):
         return repr(self.__str__())
 
     def __eq__(self, timestamp):
+        if not isinstance(timestamp, Timestamp):
+            return False
         return self.value == timestamp.value
 
     def __lt__(self, timestamp):
@@ -161,6 +168,10 @@ class Version(object):
         if self.build is not None:
             self.build = int(self.build)
 
+    @property
+    def as_raw(self):
+        return self.value
+
     def __str__(self):
         return self.value
     
@@ -168,6 +179,8 @@ class Version(object):
         return repr(self.__str__())
 
     def __eq__(self, version):
+        if not isinstance(version, Version):
+            return False
         return (self.major, self.minor, self.fix, self.qualifier, self.build) == (version.major, version.minor, version.fix, version.qualifier, version.build)
 
     def __lt__(self, version):
@@ -225,6 +238,10 @@ class Range(object):
                 return False
         return True
 
+    @property
+    def as_raw(self):
+        return self.value
+
 @dsl_specification('3.2.4', 'tosca-simple-profile-1.0')
 class List(list):
     """
@@ -248,6 +265,10 @@ class List(list):
                 r.append(v)
 
         return r
+
+    # Can't define as property because it's old-style Python class
+    def as_raw(self):
+        return list(self)
 
 @dsl_specification('3.2.5', 'tosca-simple-profile-1.0')
 class Map(StrictDict):
@@ -279,6 +300,10 @@ class Map(StrictDict):
     def __init__(self, items=None):
         super(Map, self).__init__(items, key_class=str)
 
+    # Can't define as property because it's old-style Python class
+    def as_raw(self):
+        return OrderedDict(self)
+
 @total_ordering
 @dsl_specification('3.2.6', 'tosca-simple-profile-1.0')
 class Scalar(object):
@@ -305,6 +330,10 @@ class Scalar(object):
         self.unit = match.group('unit')
         self.value = self.__class__.TYPE(self.scalar * self.__class__.UNITS[self.unit])
     
+    @property
+    def as_raw(self):
+        return self.value
+
     def __str__(self):
         return '%s %s' % (self.value, self.__class__.UNIT)
 
@@ -312,10 +341,16 @@ class Scalar(object):
         return repr(self.__str__())
     
     def __eq__(self, scalar):
+        if not isinstance(scalar, Scalar):
+            return False
         return self.value == scalar.value
 
     def __lt__(self, scalar):
-        return self.value < scalar.value
+        if isinstance(scalar, Scalar):
+            value = scalar.value
+        else:
+            value = self.__class__.TYPE(scalar)
+        return self.value < value
 
 @dsl_specification('3.2.6.4', 'tosca-simple-profile-1.0')
 class ScalarSize(Scalar):

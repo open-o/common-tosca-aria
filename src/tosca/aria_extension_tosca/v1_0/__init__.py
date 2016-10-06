@@ -15,23 +15,22 @@
 #
 
 from .presenter import ToscaSimplePresenter1_0
-from .presentation import ToscaPresentation
 from .assignments import PropertyAssignment, OperationAssignment, InterfaceAssignment, RelationshipAssignment, RequirementAssignment, AttributeAssignment, CapabilityAssignment, ArtifactAssignment
 from .definitions import PropertyDefinition, AttributeDefinition, ParameterDefinition, OperationDefinition, InterfaceDefinition, RelationshipDefinition, RequirementDefinition, CapabilityDefinition
 from .filters import CapabilityFilter, NodeFilter
 from .misc import Description, MetaData, Repository, Import, ConstraintClause, EntrySchema, OperationImplementation, SubstitutionMappingsRequirement, SubstitutionMappingsCapability, SubstitutionMappings
-from .templates import NodeTemplate, RelationshipTemplate, GroupDefinition, PolicyDefinition, TopologyTemplate, ServiceTemplate
+from .templates import NodeTemplate, RelationshipTemplate, GroupTemplate, PolicyTemplate, TopologyTemplate, ServiceTemplate
 from .types import ArtifactType, DataType, CapabilityType, InterfaceType, RelationshipType, NodeType, GroupType, PolicyType
 from .data_types import Timestamp, Version, Range, List, Map, ScalarSize, ScalarTime, ScalarFrequency
 from .functions import Concat, Token, GetInput, GetProperty, GetAttribute, GetOperationOutput, GetNodesOfType, GetArtifact
 
 MODULES = (
-    'utils',)
+    'modeling',
+    'presentation')
 
 __all__ = (
     'MODULES',
     'ToscaSimplePresenter1_0',
-    'ToscaPresentation',
     'PropertyAssignment',
     'OperationAssignment',
     'InterfaceAssignment',
@@ -62,8 +61,8 @@ __all__ = (
     'SubstitutionMappings',
     'NodeTemplate',
     'RelationshipTemplate',
-    'GroupDefinition',
-    'PolicyDefinition',
+    'GroupTemplate',
+    'PolicyTemplate',
     'TopologyTemplate',
     'ServiceTemplate',
     'ArtifactType',

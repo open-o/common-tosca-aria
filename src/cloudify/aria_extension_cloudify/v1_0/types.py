@@ -15,9 +15,9 @@
 #
 
 from .definitions import InterfaceDefinition, PropertyDefinition
-from .utils.properties import get_inherited_property_definitions
-from .utils.interfaces import get_inherited_interface_definitions
-from .utils.relationships import get_relationship_inherited_property_definitions
+from .modeling.properties import get_inherited_property_definitions
+from .modeling.interfaces import get_inherited_interface_definitions
+from .modeling.relationships import get_relationship_inherited_property_definitions
 from aria import dsl_specification
 from aria.presentation import Presentation, has_fields, primitive_field, object_dict_field, field_validator, derived_from_validator
 from aria.utils import ReadOnlyDict, cachedmethod
@@ -66,7 +66,7 @@ class NodeType(Presentation):
 
     @cachedmethod
     def _get_parent(self, context):
-        return context.presentation.presenter.node_types.get(self.derived_from)
+        return context.presentation.get_from_dict('service_template', 'node_types', self.derived_from)
 
     @cachedmethod
     def _get_properties(self, context):
@@ -98,7 +98,7 @@ class RelationshipType(Presentation):
         :rtype: str
         """
 
-    @field_validator(derived_from_validator('relationship_types'))
+    @field_validator(derived_from_validator('relationships'))
     @primitive_field(str)
     def derived_from(self):
         """
@@ -133,7 +133,7 @@ class RelationshipType(Presentation):
 
     @cachedmethod
     def _get_parent(self, context):
-        return context.presentation.presenter.relationship_types.get(self.derived_from)
+        return context.presentation.get_from_dict('service_template', 'relationships', self.derived_from)
 
     @cachedmethod
     def _get_properties(self, context):
@@ -190,6 +190,10 @@ class PolicyType(Presentation):
         """
 
     @cachedmethod
+    def _get_parent(self, context):
+        return None
+
+    @cachedmethod
     def _get_properties(self, context):
         return self.properties
 
@@ -198,7 +202,7 @@ class PolicyType(Presentation):
 @dsl_specification('policy-triggers', 'cloudify-1.1')
 @dsl_specification('policy-triggers', 'cloudify-1.2')
 @dsl_specification('policy-triggers', 'cloudify-1.3')
-class PolicyTrigger(Presentation):
+class GroupPolicyTriggerType(Presentation):
     """
     :code:`policy_triggers` specify the implementation of actions invoked by policies and declare the properties that define the trigger's behavior.
     
@@ -222,6 +226,9 @@ class PolicyTrigger(Presentation):
         """
 
     @cachedmethod
+    def _get_parent(self, context):
+        return None
+
+    @cachedmethod
     def _get_properties(self, context):
         return self.parameters
-

@@ -52,24 +52,28 @@ setup(
     packages=[
         'aria',
         'aria.consumption',
-        'aria.deployment',
         'aria.loading',
+        'aria.modeling',
         'aria.presentation',
         'aria.reading',
         'aria.tools',
         'aria.utils',
+        'aria.validation',
         'aria_extension_tosca',
         'aria_extension_tosca.v1_0',
-        'aria_extension_tosca.v1_0.utils'],
+        'aria_extension_tosca.v1_0.modeling',
+        'aria_extension_tosca.v1_0.presentation'],
 
     package_dir={
         'aria': 'src/aria/aria',
         'aria_extension_tosca': 'src/tosca/aria_extension_tosca'},
       
     package_data={
+        'aria.tools': [
+            'web/**'],
         'aria_extension_tosca': [
-            'profiles/tosca-simple-profile-1.0/*',
-            'profiles/tosca-simple-nfv-1.0/*']},
+            'profiles/tosca-simple-profile-1.0/**',
+            'profiles/tosca-simple-nfv-1.0/**']},
     
     scripts=[
         'src/aria/scripts/aria',
@@ -77,7 +81,7 @@ setup(
       
     # Please make sure this is in sync with src/aria/requirements.txt
     install_requires=[
-        'ruamel.yaml==0.12.12',
+        'ruamel.yaml==0.12.14',
         'clint==0.5.1',
         'Jinja2==2.8',
         'requests==2.11.1',

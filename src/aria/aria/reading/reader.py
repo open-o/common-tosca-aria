@@ -15,14 +15,14 @@
 #
 
 from .. import UnimplementedFunctionalityError
-from ..utils import OpenClose, classname
+from ..utils import OpenClose, full_type_name
 from .exceptions import ReaderError, AlreadyReadError
 
 class Reader(object):
     """
     Base class for ARIA readers.
     
-    Readers provide agnostic raw data by consuming :class:`aria.loader.Loader` instances.
+    Readers provide agnostic raw data by consuming :class:`aria.loading.Loader` instances.
     """
     
     def __init__(self, context, location, loader):
@@ -45,4 +45,4 @@ class Reader(object):
             return data
     
     def read(self):
-        raise UnimplementedFunctionalityError(classname(self) + '.read')
+        raise UnimplementedFunctionalityError(full_type_name(self) + '.read')

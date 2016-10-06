@@ -18,13 +18,10 @@ from .exceptions import ConsumerError
 from .context import ConsumptionContext
 from .style import Style
 from .consumer import Consumer, ConsumerChain
-from .presentation import Presentation
-from .validation import ValidationContext, Validation
-from .yaml import Yaml
-from .template import Template
+from .presentation import Read
+from .validation import Validate
+from .modeling import Model, Instance
 from .inputs import Inputs
-from .plan import Plan
-from .types import Types
 
 __all__ = (
     'ConsumerError',
@@ -32,11 +29,8 @@ __all__ = (
     'Style',
     'Consumer',
     'ConsumerChain',
-    'Presentation',
-    'ValidationContext',
-    'Validation',
-    'Yaml',
-    'Template',
-    'Inputs',
-    'Plan',
-    'Types')
+    'Read',
+    'Validate',
+    'Model',
+    'Instance',
+    'Inputs')

@@ -14,7 +14,7 @@
 # under the License.
 #
 
-from .utils.properties import get_assigned_and_defined_property_values
+from .modeling.properties import get_assigned_and_defined_property_values
 from aria.presentation import Presentation, AsIsPresentation, has_fields, allow_unknown_fields, short_form_field, primitive_field, object_dict_field, object_dict_unknown_fields, field_validator, type_validator
 from aria.utils import ReadOnlyDict, cachedmethod
 from aria import dsl_specification
@@ -23,8 +23,8 @@ class PropertyAssignment(AsIsPresentation):
     pass
 
 @has_fields
-class TriggerAssignment(Presentation):
-    @field_validator(type_validator('policy trigger', 'policy_triggers'))
+class GroupPolicyTriggerAssignment(Presentation):
+    @field_validator(type_validator('group policy trigger type', 'policy_triggers'))
     @primitive_field(str, required=True)
     def type(self):
         """
@@ -43,18 +43,18 @@ class TriggerAssignment(Presentation):
 
     @cachedmethod
     def _get_type(self, context):
-        return context.presentation.presenter.policy_triggers.get(self.type) if context.presentation.presenter.policy_triggers is not None else None
+        return context.presentation.get_from_dict('service_template', 'policy_triggers', self.type)
 
     @cachedmethod
     def _get_property_values(self, context):
         return ReadOnlyDict(get_assigned_and_defined_property_values(context, self, 'parameters'))
 
     def _validate(self, context):
-        super(TriggerAssignment, self)._validate(context)
+        super(GroupPolicyTriggerAssignment, self)._validate(context)
         self._get_property_values(context)
 
 @has_fields
-class PolicyAssignment(Presentation):
+class GroupPolicyAssignment(Presentation):
     @field_validator(type_validator('policy type', 'policy_types'))
     @primitive_field(str, required=True)
     def type(self):
@@ -72,24 +72,24 @@ class PolicyAssignment(Presentation):
         :rtype: dict of str, :class:`PropertyAssignment`
         """
 
-    @object_dict_field(TriggerAssignment)
+    @object_dict_field(GroupPolicyTriggerAssignment)
     def triggers(self):
         """
         A dict of triggers.
         
-        :rtype: dict of str, :class:`TriggerAssignment`
+        :rtype: dict of str, :class:`GroupPolicyTriggerAssignment`
         """
 
     @cachedmethod
     def _get_type(self, context):
-        return context.presentation.presenter.policy_types.get(self.type) if context.presentation.presenter.policy_types is not None else None
+        return context.presentation.get_from_dict('service_template', 'policy_types', self.type)
 
     @cachedmethod
     def _get_property_values(self, context):
         return ReadOnlyDict(get_assigned_and_defined_property_values(context, self))
 
     def _validate(self, context):
-        super(PolicyAssignment, self)._validate(context)
+        super(GroupPolicyAssignment, self)._validate(context)
         self._get_property_values(context)
 
 @short_form_field('implementation')

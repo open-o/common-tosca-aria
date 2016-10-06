@@ -15,13 +15,14 @@
 #
 
 from .consumer import Consumer
-from ..utils import FixedThreadPoolExecutor
+from ..utils import FixedThreadPoolExecutor, json_dumps, yaml_dumps
 from ..loading import UriLocation
 from ..reading import AlreadyReadError
+from ..presentation import PresenterNotFoundError
 
-class Presentation(Consumer):
+class Read(Consumer):
     """
-    Generates the presentation.
+    Reads the presentation.
     
     It works by consuming a data source via appropriate :class:`aria.loader.Loader`,
     :class:`aria.reader.Reader`, and :class:`aria.presenter.Presenter` instances.
@@ -46,7 +47,7 @@ class Presentation(Consumer):
         executor = FixedThreadPoolExecutor(size=self.context.presentation.threads, timeout=self.context.presentation.timeout)
         executor.print_exceptions = self.context.presentation.print_exceptions
         try:
-            presenter = self._present(self.context.presentation.location, None, self.context.presentation.presenter_class, executor)
+            presenter = self._present(self.context.presentation.location, None, None, executor)
             executor.drain()
             
             # Handle exceptions
@@ -69,23 +70,41 @@ class Presentation(Consumer):
         self.context.presentation.presenter = presenter
 
     def dump(self):
-        self.context.presentation.presenter._dump(self.context)
+        if self.context.has_arg_switch('yaml'):
+            indent = self.context.get_arg_value_int('indent', 2)
+            raw = self.context.presentation.presenter._raw
+            self.context.write(yaml_dumps(raw, indent=indent))
+        elif self.context.has_arg_switch('json'):
+            indent = self.context.get_arg_value_int('indent', 2)
+            raw = self.context.presentation.presenter._raw
+            self.context.write(json_dumps(raw, indent=indent))
+        else:
+            self.context.presentation.presenter._dump(self.context)
 
     def _handle_exception(self, e):
         if isinstance(e, AlreadyReadError):
             return
-        super(Presentation, self)._handle_exception(e)
+        super(Read, self)._handle_exception(e)
     
     def _present(self, location, origin_location, presenter_class, executor):
         raw = self._read(location, origin_location)
-        
-        if presenter_class is None:
-            presenter_class = self.context.presentation.presenter_source.get_presenter(raw)
+
+        if self.context.presentation.presenter_class is not None:
+            # The presenter class we specified in the context overrides everything 
+            presenter_class = self.context.presentation.presenter_class
+        else:
+            try:
+                presenter_class = self.context.presentation.presenter_source.get_presenter(raw)
+            except PresenterNotFoundError:
+                # We'll use the presenter class we were given (from the presenter that imported us)
+                pass
+            if presenter_class is None:
+                raise PresenterNotFoundError()
         
         presentation = presenter_class(raw=raw)
 
-        if presentation is not None and hasattr(presentation, '_link'):
-            presentation._link()
+        if presentation is not None and hasattr(presentation, '_link_locators'):
+            presentation._link_locators()
             
         # Submit imports to executor
         if hasattr(presentation, '_get_import_locations'):

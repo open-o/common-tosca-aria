@@ -14,10 +14,15 @@
 # under the License.
 #
 
-from ..utils import HasCachedMethods, classname, deepcopy_with_locators, puts
-from .utils import validate_no_short_form, validate_no_unknown_fields, validate_known_fields
+from .null import none_to_null
+from .utils import get_locator, validate_no_short_form, validate_no_unknown_fields, validate_known_fields
+from ..utils import HasCachedMethods, full_type_name, deepcopy_with_locators, puts
 
 class Value(object):
+    """
+    Encapsulates a typed value assignment.
+    """
+    
     def __init__(self, the_type, value):
         self.type = deepcopy_with_locators(the_type)
         self.value = deepcopy_with_locators(value)
@@ -52,7 +57,7 @@ class PresentationBase(HasCachedMethods):
             return self._name
         elif self._container is not None:
             return self._container._fullname
-        return classname(self)
+        return full_type_name(self)
 
     @property
     def _locator(self):
@@ -63,13 +68,9 @@ class PresentationBase(HasCachedMethods):
         :rtype: :class:`aria.reading.Locator`
         """
         
-        if hasattr(self._raw, '_locator'):
-            return self._raw._locator
-        elif self._container is not None:
-            return self._container._locator
-        return None
+        return get_locator(self._raw, self._container)
 
-    def _get_child_locator(self, name):
+    def _get_child_locator(self, *names):
         """
         Attempts to return the locator of one our children. Will default to our locator
         if not found.
@@ -80,21 +81,7 @@ class PresentationBase(HasCachedMethods):
         if hasattr(self._raw, '_locator'):
             locator = self._raw._locator
             if locator is not None:
-                return locator.get_child(name)
-        return self._locator
-
-    def _get_grandchild_locator(self, name1, name2):
-        """
-        Attempts to return the locator of one our grand children. Will default to our
-        locator if not found.
-        
-        :rtype: :class:`aria.reading.Locator`
-        """
-
-        if hasattr(self._raw, '_locator'):
-            locator = self._raw._locator
-            if locator is not None:
-                return locator.get_grandchild(name1, name2)
+                return locator.get_child(*names)
         return self._locator
 
     def _dump(self, context):
@@ -175,16 +162,18 @@ class AsIsPresentation(PresentationBase):
     Base class for trivial ARIA presentations that provide the raw value as is.
     """
     
+    # TODO: support type coercion
+    
     @property
     def value(self):
-        return self._raw
+        return none_to_null(self._raw)
     
     @value.setter
     def value(self, value):
         self._raw = value
 
-class FakePresentation(PresentationBase):
-    """
-    Instances of this class are useful as placeholders when a presentation is required
-    but unavailable. 
-    """
+    def _dump(self, context):
+        if hasattr(self._raw, '_dump'):
+            self._raw._dump(context)
+        else:
+            super(AsIsPresentation, self)._dump(context)

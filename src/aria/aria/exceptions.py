@@ -14,7 +14,7 @@
 # under the License.
 #
 
-from .issue import Issue
+from .validation import Issue
 import sys
 
 class AriaError(Exception):

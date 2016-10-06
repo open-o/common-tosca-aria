@@ -22,9 +22,11 @@ class LoadingContext(object):
     Properties:
     
     * :code:`loader_source`: For finding loader instances
-    * :code:`search_paths`: List of additional search paths :class:`FileTextLoader`
+    * :code:`file_search_paths`: List of additional search paths for :class:`FileTextLoader`
+    * :code:`uri_search_paths`: List of additional search paths for :class:`UriLoader`
     """
     
     def __init__(self):
         self.loader_source = DefaultLoaderSource()
-        self.search_paths = StrictList(value_class=basestring)
+        self.file_search_paths = StrictList(value_class=basestring)
+        self.uri_search_paths = StrictList(value_class=basestring)

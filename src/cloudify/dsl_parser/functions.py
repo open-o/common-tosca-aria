@@ -14,18 +14,7 @@
 # under the License.
 #
 
-from aria_extension_cloudify.v1_0.functions import get_function
-from aria.consumption import ConsumptionContext
-from aria.presentation import FakePresentation
-
-class ClassicContext(object):
-    def __init__(self, context, get_node_instances_method, get_node_instance_method, get_node_method):
-        self.self_node_id = context.get('self')
-        self.source_node_id = context.get('source')
-        self.target_node_id = context.get('target')
-        self.get_nodes = get_node_instances_method
-        self.get_node = get_node_instance_method
-        self.get_node_template = get_node_method
+from aria_extension_cloudify.functions import FunctionContext, get_function
 
 def evaluate_outputs(outputs_def, get_node_instances_method, get_node_instance_method, get_node_method):
     """
@@ -53,21 +42,15 @@ def evaluate_functions(payload, context, get_node_instances_method, get_node_ins
     
     #print '!!! evaluate_function', payload, context    
     
-    classic_context = ClassicContext(context, get_node_instances_method, get_node_instance_method, get_node_method)
-    consumption_context = ConsumptionContext()
-    presentation = FakePresentation()
+    function_context = FunctionContext(context, get_node_instances_method, get_node_instance_method, get_node_method)
     
     r = {}
     if payload:
         for name, value in payload.iteritems():
-            value = value['default']
-            is_function, fn = get_function(consumption_context, presentation, value)
-            if consumption_context.validation.dump_issues():
-                break
-            if is_function:
-                r[name] = fn._evaluate_classic(classic_context)
-            else:
-                r[name] = value
+            #value = value['default']
+            fn = get_function(value)
+            if fn:
+                r[name] = fn.evaluate(function_context)
             # TODO: coerce to value['type']?
     
     return r    

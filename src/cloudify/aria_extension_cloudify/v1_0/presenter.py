@@ -16,8 +16,8 @@
 
 from .templates import ServiceTemplate
 from .functions import GetInput, GetProperty, GetAttribute
-from .utils.deployment import get_deployment_template
-from aria import Issue
+from ..modeling import get_service_model
+from aria.validation import Issue
 from aria.presentation import Presenter
 from aria.utils import EMPTY_READ_ONLY_LIST, cachedmethod
 
@@ -26,6 +26,9 @@ class CloudifyPresenter1_0(Presenter):
     ARIA presenter for the `Cloudify DSL v1.0 specification <http://getcloudify.org/guide/3.1/dsl-spec-general.html>`__.
     """
 
+    DSL_VERSION = 'cloudify_dsl_1_0'
+    ALLOWED_IMPORTED_DSL_VERSIONS = ('cloudify_dsl_1_0',)
+    
     @property
     @cachedmethod
     def service_template(self):
@@ -49,118 +52,36 @@ class CloudifyPresenter1_0(Presenter):
 
     # Presenter
 
-    @staticmethod
-    def can_present(raw):
-        dsl = raw.get('tosca_definitions_version')
-        return dsl == 'cloudify_dsl_1_0'
-
     def _get_import_locations(self):
         return self.service_template.imports if (self.service_template and self.service_template.imports) else EMPTY_READ_ONLY_LIST
-    
+
     def _validate_import(self, context, presentation):
         r = True
-        if (presentation.service_template.tosca_definitions_version is not None) and (presentation.service_template.tosca_definitions_version != self.service_template.tosca_definitions_version):
-            context.validation.report('import "tosca_definitions_version" is not "%s": %s' % (self.service_template.tosca_definitions_version, presentation.service_template.tosca_definitions_version), locator=presentation._get_child_locator('inputs'), level=Issue.BETWEEN_TYPES)
+        if not super(CloudifyPresenter1_0, self)._validate_import(context, presentation):
             r = False
-        if presentation.inputs is not None:
+        if presentation.service_template.inputs is not None:
             context.validation.report('import has forbidden "inputs" section', locator=presentation._get_child_locator('inputs'), level=Issue.BETWEEN_TYPES)
             r = False
-        if presentation.outputs is not None:
+        if presentation.service_template.outputs is not None:
             context.validation.report('import has forbidden "outputs" section', locator=presentation._get_child_locator('outputs'), level=Issue.BETWEEN_TYPES)
             r = False
-        if presentation.node_templates is not None:
+        if presentation.service_template.node_templates is not None:
             context.validation.report('import has forbidden "node_templates" section', locator=presentation._get_child_locator('node_templates'), level=Issue.BETWEEN_TYPES)
             r = False
-        if presentation.groups is not None:
-            context.validation.report('import has forbidden "groups" section', locator=presentation._get_child_locator('groups'), level=Issue.BETWEEN_TYPES)
-            r = False
+            
+        # Note: The documentation specifies that importing "groups" is also not allowed:
+        #
+        # http://getcloudify.org/guide/3.1/dsl-spec-imports.html
+        #
+        # However, the documentation is *wrong*. Importing "groups" has always been allowed
+        # in the parser code.
+        #
+        # This documentation error continued all the way to DSL 1.3:
+        #
+        # http://docs.getcloudify.org/3.4.0/blueprints/spec-imports/
+
         return r
 
     @cachedmethod
-    def _get_deployment_template(self, context):
-        return get_deployment_template(context, self)
-
-    @property
-    @cachedmethod
-    def repositories(self):
-        return None
-
-    @property
-    @cachedmethod
-    def inputs(self):
-        return self.service_template.inputs
-            
-    @property
-    @cachedmethod
-    def outputs(self):
-        return self.service_template.outputs
-
-    @property
-    @cachedmethod
-    def data_types(self):
-        return None
-    
-    @property
-    @cachedmethod
-    def node_types(self):
-        return self.service_template.node_types
-    
-    @property
-    @cachedmethod
-    def relationship_types(self):
-        return self.service_template.relationships
-    
-    @property
-    @cachedmethod
-    def group_types(self):
-        return None
-
-    @property
-    @cachedmethod
-    def capability_types(self):
-        return None
-
-    @property
-    @cachedmethod
-    def interface_types(self):
-        return None
-
-    @property
-    @cachedmethod
-    def artifact_types(self):
-        return None
-
-    @property
-    @cachedmethod
-    def policy_types(self):
-        return self.service_template.policy_types
-    
-    @property
-    @cachedmethod
-    def node_templates(self):
-        return self.service_template.node_templates
-
-    @property
-    @cachedmethod
-    def relationship_templates(self):
-        return None
-
-    @property
-    @cachedmethod
-    def groups(self):
-        return self.service_template.groups
-
-    @property
-    @cachedmethod
-    def policies(self):
-        return None
-
-    @property
-    @cachedmethod
-    def policy_triggers(self):
-        return self.service_template.policy_triggers
-
-    @property
-    @cachedmethod
-    def workflows(self):
-        return self.service_template.workflows
+    def _get_service_model(self, context):
+        return get_service_model(context)

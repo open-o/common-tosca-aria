@@ -14,31 +14,57 @@
 # under the License.
 #
 
+from .locator import LocatableString, LocatableInt, LocatableFloat
 from .reader import Reader
 from .exceptions import ReaderSyntaxError
 from .locator import Locator
 from collections import OrderedDict
-import ruamel.yaml as yaml # @UnresolvedImport
+from ruamel import yaml # @UnresolvedImport
+
+# Add our types to ruamel.yaml
+yaml.representer.RoundTripRepresenter.add_representer(LocatableString, yaml.representer.RoundTripRepresenter.represent_unicode)
+yaml.representer.RoundTripRepresenter.add_representer(LocatableInt, yaml.representer.RoundTripRepresenter.represent_int)
+yaml.representer.RoundTripRepresenter.add_representer(LocatableFloat, yaml.representer.RoundTripRepresenter.represent_float)
+
+MERGE_TAG = u'tag:yaml.org,2002:merge'
+MAP_TAG = u'tag:yaml.org,2002:map'
 
 class YamlLocator(Locator):
     """
     Map for agnostic raw data read from YAML.
     """
     
-    def parse(self, yaml_loader, node, location):
+    def add_children(self, node):
         if isinstance(node, yaml.SequenceNode):
             self.children = []
             for n in node.value:
-                locator = YamlLocator(location, n.start_mark.line + 1, n.start_mark.column + 1)
-                self.children.append(locator)
-                locator.parse(yaml_loader, n, location)
+                self.add_child(n)
         elif isinstance(node, yaml.MappingNode):
-            yaml_loader.flatten_mapping(node)
             self.children = {}
-            for key, n in node.value:
-                locator = YamlLocator(location, key.start_mark.line + 1, key.start_mark.column + 1)
+            for k, n in node.value:
+                self.add_child(n, k)
+    
+    def add_child(self, node, key=None):
+        locator = YamlLocator(self.location, node.start_mark.line + 1, node.start_mark.column + 1)
+        if key is not None:
+            # Dict
+            if key.tag == MERGE_TAG:
+                for merge_key, merge_node in node.value:
+                    self.add_child(merge_node, merge_key)
+            else:
                 self.children[key.value] = locator
-                locator.parse(yaml_loader, n, location)
+        else:
+            # List
+            self.children.append(locator)
+        locator.add_children(node)
+
+def construct_yaml_map(self, node):
+    data = OrderedDict()
+    yield data
+    value = self.construct_mapping(node)
+    data.update(value)
+
+yaml.constructor.SafeConstructor.add_constructor(MAP_TAG, construct_yaml_map)
 
 class YamlReader(Reader):
     """
@@ -49,19 +75,21 @@ class YamlReader(Reader):
         data = self.load()
         try:
             data = unicode(data)
-            yaml_loader = yaml.RoundTripLoader(data)
-            node = yaml_loader.get_single_node()
-            locator = YamlLocator(self.loader.location, 0, 0)
-            if node is None:
-                raw = OrderedDict()
-            else:
-                locator.parse(yaml_loader, node, self.loader.location)
-                raw = yaml_loader.construct_document(node)
-            #locator.dump()
-            setattr(raw, '_locator', locator)
-            return raw
-            
-            #return yaml.load(data, yaml.RoundTripLoader)
+            #yaml_loader = yaml.RoundTripLoader(data) # Issue: https://bitbucket.org/ruamel/yaml/issues/61/roundtriploader-causes-exceptions-with
+            yaml_loader = yaml.SafeLoader(data)
+            try:
+                node = yaml_loader.get_single_node()
+                locator = YamlLocator(self.loader.location, 0, 0)
+                if node is not None:
+                    locator.add_children(node)
+                    raw = yaml_loader.construct_document(node)
+                else:
+                    raw = OrderedDict()
+                #locator.dump()
+                setattr(raw, '_locator', locator)
+                return raw
+            finally:
+                yaml_loader.dispose()
         except Exception as e:
             if isinstance(e, yaml.parser.MarkedYAMLError):
                 context = e.context or 'while parsing'

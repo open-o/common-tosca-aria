@@ -24,12 +24,7 @@ class Inputs(Consumer):
     """
     
     def consume(self):
-        inputs = None
-        for arg in self.context.args:
-            if arg.startswith('--inputs='):
-                inputs = arg[len('--inputs='):]
-                break
-
+        inputs = self.context.get_arg_value('inputs')
         if inputs is None:
             return
 
@@ -51,6 +46,5 @@ class Inputs(Consumer):
             self.context.validation.report('Inputs consumer: inputs are not a dict: %s' % repr(inputs))
             return
         
-        for name, the_input in inputs.iteritems():
-            self.context.deployment.inputs[name] = the_input
-            # TODO: coerce to validate type
+        for name, value in inputs.iteritems():
+            self.context.modeling.set_input(name, value)

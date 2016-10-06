@@ -5,8 +5,8 @@ ARIA is a platform and a set of tools for building TOSCA-based products, such as
 Its features can be accessed via a well-documented Python API, as well as a language-agnostic
 RESTful API that can be deployed as a microservice.
 
-On its own, ARIA it provides built-in tools for blueprint validation and for creating ready-to-run
-deployment plans. 
+On its own, ARIA provides built-in tools for blueprint validation and for creating ready-to-run
+service instances. 
 
 ARIA adheres strictly and meticulously to the
 [TOSCA Simple Profile v1.0 specification](http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/csprd02/TOSCA-Simple-Profile-YAML-v1.0-csprd02.html),
@@ -44,11 +44,11 @@ You need Python v2.7. Python v3 is not currently supported. Use a [virtualenv](h
 	. env/bin/activate
 	pip install .
 
-Now create a deployment plan from a TOSCA blueprint:
+Now create a service instance from a TOSCA blueprint:
 
 	aria blueprints/tosca/node-cellar.yaml
 	
-You can also get it in JSON format:
+You can also get it in JSON or YAML formats:
 
 	aria blueprints/tosca/node-cellar.yaml --json
 
@@ -65,41 +65,43 @@ JSON or YAML. If you do so, the value must end in ".json" or ".yaml":
 
 	aria blueprints/tosca/node-cellar.yaml --inputs=blueprints/tosca/inputs.yaml
 
-Architecture
-------------
 
-The ARIA parser generates a representation of TOSCA profiles in Python, such that they
-can be validated, consumed, or manipulated.
+API Architecture
+----------------
 
-Importantly, it keeps the original TOSCA data intact, such that modifications can be
-written back to files. This includes keeping all the original comments in the YAML
-file in their right places.
+ARIA's parsing engine comprises individual "consumers" (in the `aria.consumption`
+package) that do things with blueprints. When chained together, each performs a
+different task, adds its own validations, and can provide its own output.
 
-It is furthermore possible to use ARIA in order to generate a complete TOSCA profile
-programmatically, in Python, and then write it to files. The same technique can be
-used to convert from one DSL (parse it) to another (write it).
-
-The parser works in five phases, represented by packages and classes in the API:
+Parsing happens in five phases, represented in five packages:
 
 * `aria.loading`: Loaders are used to read the TOSCA data, usually as text.
   For example UriTextLoader will load text from URIs (including files).
 * `aria.reading`: Readers convert data from the loaders into agnostic raw
-  data. For example, YamlReader converts YAML text into Python dicts, lists, and
-  primitives.
+  data. For example, `YamlReader` converts YAML text into Python dicts, lists,
+  and primitives.
 * `aria.presentation`: Presenters wrap the agnostic raw data in a nice
   Python facade (a "presentation") that makes it much easier to work with the data,
   including utilities for validation, querying, etc. Note that presenters are
   _wrappers_: the agnostic raw data is always maintained intact, and can always be
-  accessed directly or written back to files.
-* `aria.deployment.template`: Here the topology is normalized into a coherent
+  accessed directly or written back to files. Importantly, even YAML comments are
+  maintained. So, you can modify the presentation and write it back to a YAML file
+  while keeping all the original YAML comments in the file in their right places.
+* `aria.modeling.model`: Here the topology is normalized into a coherent
   structure of node templates, requirements, and capabilities. Types are inherited
-  and properties are assigned. The deployment template is a _new_ structure,
-  which is not mapped to the YAML. In fact, it is possible to generate the template
+  and properties are assigned. The service model is a _new_ structure,
+  which is not mapped to the YAML. In fact, it is possible to generate the model
   programmatically, or from a DSL parser other than TOSCA.
-* `aria.deployment.plan`: The deployment plan is an instantiated deployment
-  templates. Node templates turn into node instances (with unique IDs), and
-  requirements are satisfied by matching them to capabilities. This is where level
-  5 validation errors are detected (see above).
+* `aria.modeling.instance`: The service instance is an instantiated service
+  model. Node templates turn into node instances (with unique IDs), and requirements
+  are satisfied by matching them to capabilities. This is where level 5 validation
+  errors are detected (see above).
+
+The phases do not have to be used in order. Indeed, consumers do not have to be
+used at all: ARIA can be used to _produce_ blueprints. For example, it is possible
+to fill in the `aria.presentation` classes programmatically, in Python, and then
+write the presentation to a YAML file as compliant TOSCA. The same technique can be
+used to convert from one DSL (consume it) to another (write it).
 
 The term "agnostic raw data" (ARD?) appears often in the documentation. It denotes
 data structures comprising _only_ Python dicts, lists, and primitives, such that
@@ -109,62 +111,37 @@ data at all times. Thus, though ARIA makes good use of the dynamic power of Pyth
 you will _always_ be able to use ARIA with other systems.
 
 
-Consumers
----------
-
-ARIA also comes with various "consumers" that do things with presentations. Consumers
-can be generic, or can be designed to work only with specific kinds of presentations.
-
-Though you can simply make use of presentation without using the ARIA consumer API,
-the advantage of using it is that you may benefit from other tools that make use of
-the API.
-
-With the CLI tool, just include the name of the consumer after the blueprint.
-
-The following consumers are built-in and useful for seeing ARIA at work at different
-phases:
-
-* `yaml`: emits a combined, validated, and normalized YAML representation of the
-   blueprint.
-* `presentation`: emits a colorized textual representation of the Python presentation
-   classes wrapping the blueprint.
-* `template`: emits a colorized textual representation of the complete topology
-   template derived from the validated blueprint. This includes all the node templates,
-   with their requirements satisfied at the level of relating to other node templates.
-* `types`: emits a colorized textual representation of the the template's type
-   hierarchies: for nodes, capabilities, and relationships.
-* `plan`: **this is the default consumer**; emits a colorized textual representation of
-   a deployment plan instantiated from the deployment template. Here the node templates
-   are each used to create one or more nodes, with the appropriate relationships between
-   them. Note that every time you run this consumer, you will get a different set of node
-   IDs.
-
-### Generator (extension)
-
-This converts the blueprint into Python code: a bunch of Python classes representing
-the blueprint. Thus, node types become classes, the instances being nodes, interfaces
-can be turned into methods, and these are connected to each other via special
-relationship classes. You can use these classes directly in your product, allowing
-a quick and easy way to move from a TOSCA blueprint to executable code.
-
-Note that the generator is entirely optional: it is very much possible to consume
-the deployment plan without converting it into Python code.
-
-
 CLI Tool
 --------
 
 Though ARIA is fully exposed as an API, it also comes with a CLI tool to allow you to
 work from the shell:
 
-	aria blueprints/tosca/node-cellar.yaml plan
+	aria blueprints/tosca/node-cellar.yaml instance
 
-The tool loads YAML files and runs consumers on them. It can be useful for quickly
-validating a blueprint.
+The CLI supports the following commands to create variations of the default consumer
+chain:
 
-If other consumers are in the Python path, it can run them, too: it can thus serve as
-a useful entry point for complex TOSCA-based tools, such as orchestrators, graphical
-modeling tools, etc.
+* `presentation`: emits a colorized textual representation of the Python presentation
+   classes wrapping the blueprint.
+* `model`: emits a colorized textual representation of the complete service model derived
+   from the validated blueprint. This includes all the node templates, with their
+   requirements satisfied at the level of relating to other node templates. Use `--types`
+   to see just the type hierarchy.
+* `instance`: **this is the default command**; emits a colorized textual representation of
+   a service instance instantiated from the service model. Here the node templates
+   are each used to create one or more nodes, with the appropriate relationships between
+   them. Note that every time you run this consumer, you will get a different set of node
+   IDs. Use `--graph` to see just the node relationship graph.
+   
+For all these commands, you can also use `--json` or `--yaml` flags to emit in those
+formats.
+
+Additionally, The CLI tool lets you specify the complete classname of your own custom
+consumer to chain at the end of the default consumer chain, after `instance`.
+
+Your customer consumer can be an entry point into a powerful TOSCA-based tool or
+application, such as an orchestrator, a graphical modeling tool, etc.
 
 
 REST Tool
@@ -177,26 +154,39 @@ wire:
 
 With the server started, you can hit a few endpoints:
 
-    curl http://localhost:8204/openoapi/tosca/v1/plan/blueprints/tosca/node-cellar.yaml
+    curl http://localhost:8204/openoapi/tosca/v1/instance/blueprints/tosca/node-cellar.yaml
     
     curl http://localhost:8204/openoapi/tosca/v1/validate/blueprints/tosca/node-cellar.yaml
 
-You will get a JSON response with a deployment plan or validation issues.
+You will get a JSON response with a service instance or validation issues.
 
 You can send inputs:
 
-	curl http://localhost:8204/openoapi/tosca/v1/plan/blueprints/tosca/node-cellar.yaml?inputs=%7B%22openstack_credential%22%3A%7B%22user%22%3A%22username%22%7D%7D
+	curl http://localhost:8204/openoapi/tosca/v1/instance/blueprints/tosca/node-cellar.yaml?inputs=%7B%22openstack_credential%22%3A%7B%22user%22%3A%22username%22%7D%7D
 
-	curl http://localhost:8204/openoapi/tosca/v1/plan/blueprints/tosca/node-cellar.yaml?inputs=blueprints/tosca/inputs.yaml
+	curl http://localhost:8204/openoapi/tosca/v1/instance/blueprints/tosca/node-cellar.yaml?inputs=blueprints/tosca/inputs.yaml
 
 You can also POST a blueprint over the wire:
 
-    curl --data-binary @blueprints/tosca/node-cellar.yaml http://localhost:8204/openoapi/tosca/v1/plan
+    curl --data-binary @blueprints/tosca/node-cellar.yaml http://localhost:8204/openoapi/tosca/v1/instance
 
 If you POST and also want to import from the filesystem, note that you must specify search
-paths when you start the server: 
+paths when you start the server:
 
     aria-rest --path blueprints/tosca /another/path/to/imports
+
+
+Generator (Extension)
+---------------------
+
+This converts the blueprint into Python code: a bunch of Python classes representing
+the blueprint. Thus, node types become classes, the instances being nodes, interfaces
+can be turned into methods, and these are connected to each other via special
+relationship classes. You can use these classes directly in your product, allowing
+a quick and easy way to move from a TOSCA blueprint to executable code.
+
+Note that the generator is entirely optional: it is very much possible to consume
+the service instance without converting it into Python code.
 
 
 Development
@@ -211,7 +201,7 @@ You do not want to install with `pip`, but instead work directly with the source
 
 You can then run the scripts in the main directory:
 
-	./aria blueprints/tosca/node-cellar.yaml plan
+	./aria blueprints/tosca/node-cellar.yaml instance
     ./aria-rest
 
 To run tests:

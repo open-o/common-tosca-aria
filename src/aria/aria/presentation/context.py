@@ -20,8 +20,8 @@ class PresentationContext(object):
     """
     Properties:
     
-    * :code:`location`: From where we will generate the presenter
     * :code:`presenter`: The generated presenter instance
+    * :code:`location`: From where we will generate the presenter
     * :code:`presenter_source`: For finding presenter classes
     * :code:`presenter_class`: Overrides :code:`presenter_source` with a specific class
     * :code:`threads`: Number of threads to use when reading data
@@ -30,10 +30,26 @@ class PresentationContext(object):
     """
     
     def __init__(self):
-        self.location = None
         self.presenter = None
+        self.location = None
         self.presenter_source = DefaultPresenterSource()
         self.presenter_class = None # overrides
         self.threads = 8
         self.timeout = 10 # in seconds
         self.print_exceptions = False
+
+    def get(self, *names):
+        o = self.presenter
+        if (o is not None) and names:
+            for name in names:
+                o = getattr(o, name, None)
+                if o is None:
+                    break
+        return o
+
+    def get_from_dict(self, *names):
+        if names:
+            o = self.get(*names[:-1])
+            if isinstance(o, dict):
+                return o.get(names[-1])
+        return None

@@ -17,13 +17,16 @@
 import os
 from uuid import uuid4
 from shutil import rmtree
-from ruamel.yaml import safe_dump
+from aria.utils import yaml_dumps
 from itertools import imap
 from tempfile import mkdtemp
 
 from testtools import TestCase
 
 from dsl_parser.parser import parse, parse_from_path
+
+
+PARSING_ISSUES_TITLE = 'parse failed with issues: \n\t'
 
 
 class TempDirectoryTestCase(TestCase):
@@ -89,19 +92,41 @@ class ParserTestCase(TestCase):
             resources_base_url=resources_base_url,
             validate_version=validate_version)
         self._validate_parse_no_issues(context)
-        return context.deployment.classic_plan
+
+        return context.modeling.classic_deployment_plan
 
     def parse_from_uri(self, uri):
         context = parse_from_path(uri)
         self._validate_parse_no_issues(context)
-        return context.deployment.classic_plan
+        return context.modeling.classic_deployment_plan
 
     def _validate_parse_no_issues(self, context):
         if not context.validation.has_issues:
             return
-        self.fail(
-            'parse failed with issues: \n\t{0}'.format('\n\t'.join(
-                issue.message for issue in context.validation.issues)))
+        msg = '{title}{messages}'.format(
+            title=PARSING_ISSUES_TITLE,
+            messages='\n\t'.join(
+                issue.message for issue in context.validation.issues))
+        raise CloudifyParserError(msg)
+
+    def assert_parser_issue_messages(self,
+                                     issue_messages,
+                                     parse_from_path=False,
+                                     parsing_arguments=None):
+        parsing_method = self.parse_from_uri if parse_from_path else self.parse
+        parsing_arguments = parsing_arguments or []
+
+        ex = self.assertRaises(CloudifyParserError,
+                               parsing_method,
+                               *parsing_arguments)
+
+        expected_error_message = '{title}{messages}'.format(
+            title=PARSING_ISSUES_TITLE,
+            messages='\n\t'.join(msg for msg in issue_messages))
+
+        self.assertEqual(expected_error_message, ex.message)
+
+
 
 
 class Template(object):
@@ -167,7 +192,7 @@ class Template(object):
             version=None):
         groups = groups or {}
         nodes = nodes or {'node': None}
-        version = 'tosca_aria_yaml_{0}'.format(version or '1_0')
+        version = 'cloudify_dsl_{0}'.format(version or '1_3')
 
         node_templates = {}
         for node, contained_in in nodes.iteritems():
@@ -197,11 +222,11 @@ class Template(object):
             blueprint['policy_types'] = policy_types
 
         self.clear()
-        self.template += safe_dump(blueprint)
+        self.template += yaml_dumps(blueprint)
 
     def from_blueprint_dict(self, blueprint):
         self.clear()
-        self.template += safe_dump(blueprint)
+        self.template += yaml_dumps(blueprint)
 
     def clear(self):
         self.template = ''
@@ -269,6 +294,8 @@ class Template(object):
             '    value: test_output_value\n'
         )
 
+class CloudifyParserError(Exception):
+    pass
 
 def op_struct(
         plugin_name,

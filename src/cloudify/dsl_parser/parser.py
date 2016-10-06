@@ -15,14 +15,21 @@
 #
 
 from aria import install_aria_extensions
-from aria.consumption import ConsumptionContext, ConsumerChain, Presentation, Validation, Template, Plan
+from aria.consumption import ConsumptionContext, ConsumerChain, Read, Validate, Model, Instance
 from aria.loading import UriLocation, LiteralLocation
-from aria_extension_cloudify import ClassicPlan
+from aria_extension_cloudify import ClassicDeploymentPlan
+from aria_extension_cloudify.v1_3 import CloudifyPresenter1_3
+import os
 
 install_aria_extensions()
 
 def parse_from_path(dsl_file_path, resources_base_url=None, additional_resource_sources=(), validate_version=True, **legacy):
-    paths = [resources_base_url] if resources_base_url is not None else []
+    paths = []
+    path = os.path.dirname(dsl_file_path)
+    if path:
+        paths.append(path)
+    if resources_base_url:
+        paths.append(resources_base_url)
     paths += additional_resource_sources
     return _parse(UriLocation(dsl_file_path), paths, validate_version)
 
@@ -30,19 +37,19 @@ def parse(dsl_string, resources_base_url=None, validate_version=True, **legacy):
     paths = [resources_base_url] if resources_base_url is not None else []
     return _parse(LiteralLocation(dsl_string), paths, validate_version)
 
-def _parse(location, search_paths=None, validate=True):
+def _parse(location, file_search_paths, validate_version):
     context = ConsumptionContext()
+    context.presentation.print_exceptions = True # Developers, developers, developers, developers
     context.presentation.location = location
-    
-    if search_paths:
-        context.loading.search_paths += search_paths
-    
-    if validate:
-        consumer = ConsumerChain(context, (Presentation, Validation, Template, Plan, ClassicPlan))
-    else:
-        consumer = ConsumerChain(context, (Presentation,))
 
-    consumer.consume()    
+    if not validate_version:
+        context.presentation.presenter_class = CloudifyPresenter1_3
+    
+    if file_search_paths:
+        context.loading.file_search_paths += file_search_paths
+    
+    consumer = ConsumerChain(context, (Read, Validate, Model, Instance, ClassicDeploymentPlan))
+    consumer.consume()
     context.validation.dump_issues()
     
     return context

@@ -15,7 +15,6 @@
 #
 
 from ..utils import puts, colored, indent
-from ruamel.yaml.representer import RoundTripRepresenter # @UnresolvedImport
 
 # We are inheriting the primitive types in order to add the ability to set an attribute (_locator) on them.
 
@@ -37,12 +36,6 @@ def wrap(value):
         return True, LocatableFloat(value)
     return False, value
 
-def init_yaml():
-    # Add our types to ruamel.yaml (for round trips)
-    RoundTripRepresenter.add_representer(LocatableString, RoundTripRepresenter.represent_str)
-    RoundTripRepresenter.add_representer(LocatableInt, RoundTripRepresenter.represent_int)
-    RoundTripRepresenter.add_representer(LocatableFloat, RoundTripRepresenter.represent_float)
-
 class Locator(object):
     """
     Stores location information (line and column numbers) for agnostic raw data.
@@ -53,23 +46,24 @@ class Locator(object):
         self.column = column
         self.children = None
     
-    def get_child(self, name):
-        if isinstance(self.children, dict):
-            return self.children.get(name, self)
-        return self
+    def get_child(self, *names):
+        if (not names) or (not isinstance(self.children, dict)):
+            return self
+        name = names[0]
+        if name not in self.children:
+            return self
+        child = self.children[name]
+        return child.get_child(names[1:])
 
-    def get_grandchild(self, name1, name2):
-        if isinstance(self.children, dict):
-            locator1 = self.children.get(name1)
-            if (locator1 is not None) and (locator1.children is not None):
-                return locator1.children.get(name2, locator1)
-        return self
-    
-    def link(self, raw):
+    def link(self, raw, path=None):
+        if hasattr(raw, '_locator'):
+            # This can happen when we use anchors
+            return
+        
         try:
             setattr(raw, '_locator', self)
         except AttributeError:
-            pass
+            return
         
         if isinstance(raw, list):
             for i in range(len(raw)):
@@ -77,27 +71,29 @@ class Locator(object):
                 wrapped, r = wrap(r)
                 if wrapped:
                     raw[i] = r
+                child_path = '%s.%d' % (path, i) if path else str(i)
                 try:
-                    self.children[i].link(r)
+                    self.children[i].link(r, child_path)
                 except KeyError:
-                    raise ValueError('location map does not match agnostic raw data: %d' % i)
+                    raise ValueError('location map does not match agnostic raw data: %s' % child_path)
         elif isinstance(raw, dict):
             for k, r in raw.iteritems():
                 wrapped, r = wrap(r)
                 if wrapped:
                     raw[k] = r
+                child_path = '%s.%s' % (path, k) if path else k
                 try:
-                    self.children[k].link(r)
+                    self.children[k].link(r, child_path)
                 except KeyError:
-                    raise ValueError('location map does not match agnostic raw data: %s' % k)
+                    raise ValueError('location map does not match agnostic raw data: %s' % child_path)
     
     def merge(self, locator):
         if isinstance(self.children, dict) and isinstance(locator.children, dict):
-            for k, m in locator.children.iteritems():
+            for k, l in locator.children.iteritems():
                 if k in self.children:
-                    self.children[k].merge(m)
+                    self.children[k].merge(l)
                 else:
-                    self.children[k] = m
+                    self.children[k] = l
 
     def dump(self, key=None):
         if key:
@@ -106,12 +102,12 @@ class Locator(object):
             puts('"%s":%d:%d' % (colored.blue(self.location), self.line, self.column))
         if isinstance(self.children, list):
             with indent(2):
-                for m in self.children:
-                    m.dump()
+                for l in self.children:
+                    l.dump()
         elif isinstance(self.children, dict):
             with indent(2):
-                for k, m in self.children.iteritems():
-                    m.dump(k)
+                for k, l in self.children.iteritems():
+                    l.dump(k)
 
     def __str__(self):
         # Should be in same format as Issue.locator_as_str

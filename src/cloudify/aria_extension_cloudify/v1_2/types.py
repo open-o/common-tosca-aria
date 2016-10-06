@@ -14,9 +14,9 @@
 # under the License.
 #
 
+from .modeling.data_types import coerce_data_type_value, validate_data_type_name
 from ..v1_0 import PropertyDefinition
-from ..v1_0.utils.data_types import coerce_data_type_value
-from ..v1_0.utils.properties import get_inherited_property_definitions
+from ..v1_0.modeling.properties import get_inherited_property_definitions
 from aria import dsl_specification
 from aria.presentation import Presentation, has_fields, primitive_field, object_dict_field, field_validator, derived_from_validator
 from aria.utils import ReadOnlyDict, cachedmethod
@@ -58,7 +58,7 @@ class DataType(Presentation):
 
     @cachedmethod
     def _get_parent(self, context):
-        return context.presentation.presenter.data_types.get(self.derived_from)
+        return context.presentation.get_from_dict('service_template', 'data_types', self.derived_from)
 
     @cachedmethod
     def _get_properties(self, context):
@@ -66,6 +66,7 @@ class DataType(Presentation):
 
     def _validate(self, context):
         super(DataType, self)._validate(context)
+        validate_data_type_name(context, self)
         self._get_properties(context)
 
     def _coerce_value(self, context, presentation, value, aspect):

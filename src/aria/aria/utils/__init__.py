@@ -16,21 +16,29 @@
 
 from .openclose import OpenClose
 from .caching import  cachedmethod, HasCachedMethods
-from .formatting import JsonAsRawEncoder, classname, make_agnostic
-from .collections import ReadOnlyList, EMPTY_READ_ONLY_LIST, ReadOnlyDict, EMPTY_READ_ONLY_DICT, StrictList, StrictDict, merge, prune, deepcopy_with_locators, copy_locators
+from .formatting import JsonAsRawEncoder, YamlAsRawDumper, full_type_name, as_raw, as_agnostic, json_dumps, yaml_dumps, yaml_loads
+from .collections import ReadOnlyList, EMPTY_READ_ONLY_LIST, ReadOnlyDict, EMPTY_READ_ONLY_DICT, StrictList, StrictDict, merge, prune, deepcopy_with_locators, copy_locators, is_removable
 from .exceptions import print_exception, print_traceback
 from .imports import import_fullname, import_modules
 from .threading import ExecutorException, FixedThreadPoolExecutor, LockedList
+from .uris import as_file
 from .argparse import ArgumentParser
 from .console import puts, colored, indent
+from .rest_server import RestServer, RestRequestHandler
+from .rest_client import call_rest
 
 __all__ = (
     'OpenClose',
     'cachedmethod',
     'HasCachedMethods',
     'JsonAsRawEncoder',
-    'classname',
-    'make_agnostic',
+    'YamlAsRawDumper',
+    'full_type_name',
+    'as_raw',
+    'as_agnostic',
+    'json_dumps',
+    'yaml_dumps',
+    'yaml_loads',
     'ReadOnlyList',
     'EMPTY_READ_ONLY_LIST',
     'ReadOnlyDict',
@@ -41,6 +49,7 @@ __all__ = (
     'prune',
     'deepcopy_with_locators',
     'copy_locators',
+    'is_removable',
     'print_exception',
     'print_traceback',
     'import_fullname',
@@ -48,7 +57,11 @@ __all__ = (
     'ExecutorException',
     'FixedThreadPoolExecutor',
     'LockedList',
+    'as_file',
     'ArgumentParser',
     'puts',
     'colored',
-    'indent')
+    'indent',
+    'RestServer',
+    'RestRequestHandler',
+    'call_rest')

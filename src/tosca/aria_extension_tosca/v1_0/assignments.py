@@ -14,11 +14,11 @@
 # under the License.
 #
 
-from .presentation import ToscaPresentation
 from .filters import NodeFilter
 from .misc import Description, OperationImplementation
-from .field_validators import node_template_or_type_validator, relationship_template_or_type_validator, capability_definition_or_type_validator, node_filter_validator
-from .utils.properties import get_assigned_and_defined_property_values
+from .presentation.extensible import ExtensiblePresentation
+from .presentation.field_validators import node_template_or_type_validator, relationship_template_or_type_validator, capability_definition_or_type_validator, node_filter_validator
+from .modeling.properties import get_assigned_and_defined_property_values
 from aria import dsl_specification
 from aria.utils import ReadOnlyDict, cachedmethod
 from aria.presentation import AsIsPresentation, has_fields, allow_unknown_fields, short_form_field, primitive_field, object_field, object_dict_field, object_dict_unknown_fields, field_validator, type_validator
@@ -34,7 +34,7 @@ class PropertyAssignment(AsIsPresentation):
 @short_form_field('implementation')
 @has_fields
 @dsl_specification('3.5.13-2', 'tosca-simple-profile-1.0')
-class OperationAssignment(ToscaPresentation):
+class OperationAssignment(ExtensiblePresentation):
     """
     An operation definition defines a named function or procedure that can be bound to an implementation artifact (e.g., a script).
     
@@ -68,7 +68,7 @@ class OperationAssignment(ToscaPresentation):
 @allow_unknown_fields
 @has_fields
 @dsl_specification('3.5.14-2', 'tosca-simple-profile-1.0')
-class InterfaceAssignment(ToscaPresentation):
+class InterfaceAssignment(ExtensiblePresentation):
     """
     An interface definition defines a named interface that can be associated with a Node or Relationship Type.
     
@@ -109,7 +109,7 @@ class InterfaceAssignment(ToscaPresentation):
 
 @short_form_field('type')
 @has_fields
-class RelationshipAssignment(ToscaPresentation):
+class RelationshipAssignment(ExtensiblePresentation):
     @field_validator(relationship_template_or_type_validator)
     @primitive_field(str)
     def type(self):
@@ -139,10 +139,10 @@ class RelationshipAssignment(ToscaPresentation):
     def _get_type(self, context):
         type_name = self.type
         if type_name is not None:
-            the_type = context.presentation.presenter.relationship_templates.get(type_name) if context.presentation.presenter.relationship_templates is not None else None
+            the_type = context.presentation.get_from_dict('service_template', 'topology_template', 'relationship_templates', type_name)
             if the_type is not None:
                 return the_type, 'relationship_template'
-            the_type = context.presentation.presenter.relationship_types.get(type_name) if context.presentation.presenter.relationship_types is not None else None
+            the_type = context.presentation.get_from_dict('service_template', 'relationship_types', type_name)
             if the_type is not None:
                 return the_type, 'relationship_type'
         return None, None
@@ -150,7 +150,7 @@ class RelationshipAssignment(ToscaPresentation):
 @short_form_field('node')
 @has_fields
 @dsl_specification('3.7.2', 'tosca-simple-profile-1.0')
-class RequirementAssignment(ToscaPresentation):
+class RequirementAssignment(ExtensiblePresentation):
     """
     A Requirement assignment allows template authors to provide either concrete names of TOSCA templates or provide abstract selection criteria for providers to use to find matching TOSCA templates that are used to fulfill a named requirement's declared TOSCA Node Type.
     
@@ -207,10 +207,10 @@ class RequirementAssignment(ToscaPresentation):
     def _get_node(self, context):
         node_name = self.node
         if node_name is not None:
-            node = context.presentation.presenter.node_templates.get(node_name) if context.presentation.presenter.node_templates is not None else None
+            node = context.presentation.get_from_dict('service_template', 'topology_template', 'node_templates', node_name)
             if node is not None:
                 return node, 'node_template'
-            node = context.presentation.presenter.node_types.get(node_name) if context.presentation.presenter.node_types is not None else None
+            node = context.presentation.get_from_dict('service_template', 'node_types', node_name)
             if node is not None:
                 return node, 'node_type'
         return None, None
@@ -226,7 +226,7 @@ class RequirementAssignment(ToscaPresentation):
                 if capability in capabilities:
                     return capabilities[capability], 'capability_assignment'
             else:
-                capability_types = context.presentation.presenter.capability_types
+                capability_types = context.presentation.get_from_dict('service_template', 'capability_types')
                 if (capability_types is not None) and (capability in capability_types):
                     return capability_types[capability], 'capability_type'
         
@@ -242,7 +242,7 @@ class AttributeAssignment(AsIsPresentation):
 
 @has_fields
 @dsl_specification('3.7.1', 'tosca-simple-profile-1.0')
-class CapabilityAssignment(ToscaPresentation):
+class CapabilityAssignment(ExtensiblePresentation):
     """
     A capability assignment allows node template authors to assign values to properties and attributes for a named capability definition that is part of a Node Template's type definition.
     
@@ -278,7 +278,7 @@ class CapabilityAssignment(ToscaPresentation):
 
 @has_fields
 @dsl_specification('3.5.6', 'tosca-simple-profile-1.0')
-class ArtifactAssignment(ToscaPresentation):
+class ArtifactAssignment(ExtensiblePresentation):
     """
     An artifact definition defines a named, typed file that can be associated with Node Type or Node Template and used by orchestration engine to facilitate deployment and implementation of interface operations.
     
@@ -337,11 +337,11 @@ class ArtifactAssignment(ToscaPresentation):
 
     @cachedmethod
     def _get_type(self, context):
-        return context.presentation.presenter.artifact_types.get(self.type) if context.presentation.presenter.artifact_types is not None else None
+        return context.presentation.get_from_dict('service_template', 'artifact_types', self.type)
 
     @cachedmethod
     def _get_repository(self, context):
-        return context.presentation.presenter.repositories.get(self.repository) if context.presentation.presenter.repositories is not None else None
+        return context.presentation.get_from_dict('service_template', 'repositories', self.repository)
 
     @cachedmethod
     def _get_property_values(self, context):

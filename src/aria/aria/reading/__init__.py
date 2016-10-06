@@ -19,7 +19,7 @@ from .reader import Reader
 from .source import ReaderSource, DefaultReaderSource
 from .context import ReadingContext
 from .raw import RawReader
-from .locator import init_yaml, Locator
+from .locator import Locator
 from .yaml import YamlReader
 from .json import JsonReader
 from .jinja import JinjaReader
@@ -34,7 +34,6 @@ __all__ = (
     'DefaultReaderSource',
     'ReadingContext',
     'RawReader',
-    'init_yaml',
     'Locator',
     'YamlReader',
     'JsonReader',

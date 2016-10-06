@@ -14,7 +14,8 @@
 # under the License.
 #
 
-from .. import AriaError, Issue
+from .. import AriaError
+from ..validation import Issue
 
 class ReaderError(AriaError):
     """
