@@ -42,7 +42,7 @@ node_types:
         type: string
         default: initial
     interfaces:
-      standard:
+      Standard:
         type: tosca.interfaces.node.lifecycle.Standard
     capabilities:
       feature:
@@ -523,4 +523,3 @@ node_types:
       - binding:
           capability: tosca.capabilities.network.Bindable
           relationship: tosca.relationships.network.BindsTo
-  
