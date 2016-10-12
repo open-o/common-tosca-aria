@@ -18,7 +18,7 @@ from ..functions import get_function
 from aria import dsl_specification
 from aria.validation import Issue
 from aria.presentation import get_locator
-from aria.utils import import_fullname, full_type_name
+from aria.utils import import_fullname, full_type_name, safe_repr
 from collections import OrderedDict
 import re
 
@@ -104,7 +104,7 @@ def validate_data_type_name(context, presentation):
     
     name = presentation._name
     if get_primitive_data_type(name) is not None:
-        context.validation.report('data type name is that of a built-in type: %s' % repr(name), locator=presentation._locator, level=Issue.BETWEEN_TYPES)
+        context.validation.report('data type name is that of a built-in type: %s' % safe_repr(name), locator=presentation._locator, level=Issue.BETWEEN_TYPES)
 
 #
 # PropertyDefinition, AttributeDefinition, EntrySchema, DataType
@@ -115,7 +115,7 @@ def get_data_type(context, presentation, field_name, allow_none=False):
     Returns the type, whether it's a complex data type (a DataType instance) or a primitive (a Python primitive type class).
     
     If the type is not specified, defaults to :class:`str`, per note in section 3.2.1.1 of the
-    `TOSCA Simple Profile v1.0 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/csprd02/TOSCA-Simple-Profile-YAML-v1.0-csprd02.html#_Toc379455072>`__
+    `TOSCA Simple Profile v1.0 cos01 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#_Toc379455072>`__
     """
     
     the_type = getattr(presentation, field_name)
@@ -178,7 +178,7 @@ def apply_constraint_to_value(context, presentation, constraint_clause, value):
         return coerce_value(context, presentation, the_type, entry_schema, None, constraint, constraint_key)
     
     def report(message, constraint):
-        context.validation.report('value %s %s per constraint in "%s": %s' % (message, repr(constraint), presentation._name or presentation._container._name, repr(value)), locator=presentation._locator, level=Issue.BETWEEN_FIELDS)
+        context.validation.report('value %s %s per constraint in "%s": %s' % (message, safe_repr(constraint), presentation._name or presentation._container._name, safe_repr(value)), locator=presentation._locator, level=Issue.BETWEEN_FIELDS)
 
     if constraint_key == 'equal':
         constraint = coerce_constraint(constraint_clause.equal)
@@ -303,7 +303,7 @@ def get_primitive_data_type(type_name):
     """
     Many of the types we use in this profile are built-in types from the YAML 1.2 specification (i.e., those identified by the "tag:yaml.org,2002" version tag) [YAML-1.2].
     
-    See the `TOSCA Simple Profile v1.0 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/csprd02/TOSCA-Simple-Profile-YAML-v1.0-csprd02.html#_Toc373867862>`__
+    See the `TOSCA Simple Profile v1.0 cos01 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#_Toc373867862>`__
     """
     
     return PRIMITIVE_DATA_TYPES.get(type_name)
@@ -336,7 +336,7 @@ def coerce_value(context, presentation, the_type, entry_schema, constraints, val
 
     if the_type == None.__class__:
         if value is not None:
-            context.validation.report('field "%s" is of type "null" but has a non-null value: %s' % (presentation._name, repr(value)), locator=presentation._locator, level=Issue.BETWEEN_FIELDS)
+            context.validation.report('field "%s" is of type "null" but has a non-null value: %s' % (presentation._name, safe_repr(value)), locator=presentation._locator, level=Issue.BETWEEN_FIELDS)
             return None
     
     # Delegate to 'coerce_value' extension
@@ -433,6 +433,6 @@ def report_issue_for_bad_format(context, presentation, the_type, value, aspect, 
         aspect = '"%s" constraint'  
     
     if aspect is not None:
-        context.validation.report('%s for field "%s" is not a valid "%s": %s' % (aspect, presentation._name or presentation._container._name, get_data_type_name(the_type), repr(value)), locator=presentation._locator, level=Issue.BETWEEN_FIELDS, exception=e)
+        context.validation.report('%s for field "%s" is not a valid "%s": %s' % (aspect, presentation._name or presentation._container._name, get_data_type_name(the_type), safe_repr(value)), locator=presentation._locator, level=Issue.BETWEEN_FIELDS, exception=e)
     else:
-        context.validation.report('field "%s" is not a valid "%s": %s' % (presentation._name or presentation._container._name, get_data_type_name(the_type), repr(value)), locator=presentation._locator, level=Issue.BETWEEN_FIELDS, exception=e)
+        context.validation.report('field "%s" is not a valid "%s": %s' % (presentation._name or presentation._container._name, get_data_type_name(the_type), safe_repr(value)), locator=presentation._locator, level=Issue.BETWEEN_FIELDS, exception=e)

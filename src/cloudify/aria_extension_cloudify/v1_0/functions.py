@@ -17,7 +17,7 @@
 from aria import InvalidValueError, dsl_specification
 from aria.validation import Issue
 from aria.modeling import Function, CannotEvaluateFunction
-from aria.utils import as_raw
+from aria.utils import as_raw, safe_repr
 
 @dsl_specification('intrinsic-functions-2', 'cloudify-1.0')
 @dsl_specification('intrinsic-functions-2', 'cloudify-1.1')
@@ -39,24 +39,17 @@ class GetInput(Function):
             if isinstance(self.input_property_name, basestring):
                 inputs = context.presentation.get('service_template', 'inputs')
                 if (inputs is None) or (self.input_property_name not in inputs):
-                    raise InvalidValueError('function "get_input" argument is not a valid input name: %s' % repr(argument), locator=self.locator)
+                    raise InvalidValueError('function "get_input" argument is not a valid input name: %s' % safe_repr(argument), locator=self.locator)
         
         self.context = context
 
     @property
     def as_raw(self):
-        input_property_name = self.input_property_name
-        if hasattr(input_property_name, 'as_raw'):
-            input_property_name = as_raw(input_property_name)
-        return {'get_input': input_property_name}
+        return {'get_input': as_raw(self.input_property_name)}
     
     def _evaluate(self, context, container):
-        if not hasattr(self.context.modeling, 'classic_deployment_plan'):
-            raise CannotEvaluateFunction()
-        inputs = self.context.modeling.classic_deployment_plan['inputs']
-        if self.input_property_name not in inputs:
-            raise CannotEvaluateFunction()
-        return inputs[self.input_property_name]
+        the_input = context.modeling.model.inputs.get(self.input_property_name)
+        return the_input.value if the_input is not None else None
 
 @dsl_specification('intrinsic-functions-3', 'cloudify-1.0')
 @dsl_specification('intrinsic-functions-3', 'cloudify-1.1')
@@ -73,7 +66,7 @@ class GetProperty(Function):
         self.locator = presentation._locator
         
         if (not isinstance(argument, list)) or (len(argument) < 2):
-            raise InvalidValueError('function "get_property" argument must be a list of at least 2 string expressions: %s' % repr(argument), locator=self.locator)
+            raise InvalidValueError('function "get_property" argument must be a list of at least 2 string expressions: %s' % safe_repr(argument), locator=self.locator)
 
         self.modelable_entity_name = parse_modelable_entity_name(context, presentation, 'get_property', 0, argument[0])
         self.nested_property_name_or_index = argument[1:] # the first of these will be tried as a req-or-cap name
@@ -100,7 +93,7 @@ class GetAttribute(Function):
         self.locator = presentation._locator
         
         if (not isinstance(argument, list)) or (len(argument) < 2):
-            raise InvalidValueError('function "get_attribute" argument must be a list of at least 2 string expressions: %s' % repr(argument), locator=self.locator)
+            raise InvalidValueError('function "get_attribute" argument must be a list of at least 2 string expressions: %s' % safe_repr(argument), locator=self.locator)
 
         self.modelable_entity_name = parse_modelable_entity_name(context, presentation, 'get_attribute', 0, argument[0])
         self.nested_property_name_or_index = argument[1:] # the first of these will be tried as a req-or-cap name
@@ -155,7 +148,7 @@ def parse_modelable_entity_name(context, presentation, name, index, value):
             node_templates = context.presentation.get('service_template', 'node_templates') or {}
             relationship_templates = context.presentation.get('service_template', 'relationships') or {}
             if (value not in node_templates) and (value not in relationship_templates):
-                raise InvalidValueError('function "%s" parameter %d is not a valid modelable entity name: %s' % (name, index + 1, repr(value)), locator=presentation._locator, level=Issue.BETWEEN_TYPES)
+                raise InvalidValueError('function "%s" parameter %d is not a valid modelable entity name: %s' % (name, index + 1, safe_repr(value)), locator=presentation._locator, level=Issue.BETWEEN_TYPES)
     return value
 
 def parse_self(presentation):

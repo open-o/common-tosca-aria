@@ -14,17 +14,7 @@
 # under the License.
 #
 
-imports:
-  - tosca-simple-profile-1.0/tosca-simple-profile-1.0.yaml
+from .presenter import ToscaSimpleNfvPresenter1_0
 
-node_types:
-
-  nginx.LoadBalancer:
-    description: >-
-      Nginx as a loadbalancer.
-    derived_from: tosca.nodes.LoadBalancer
-    requirements:
-      - host:
-          capability: tosca.capabilities.Container
-          node: tosca.nodes.Compute
-          relationship: tosca.relationships.HostedOn
+__all__ = (
+    'ToscaSimpleNfvPresenter1_0',)

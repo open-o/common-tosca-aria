@@ -16,7 +16,7 @@
 
 from .modeling.data_types import coerce_to_data_type_class, report_issue_for_bad_format, coerce_value
 from aria import dsl_specification
-from aria.utils import StrictDict
+from aria.utils import StrictDict, safe_repr
 from functools import total_ordering
 from datetime import datetime, tzinfo, timedelta
 from collections import OrderedDict
@@ -134,7 +134,7 @@ class Version(object):
     """
     TOSCA supports the concept of "reuse" of type definitions, as well as template definitions which could be version and change over time. It is important to provide a reliable, normative means to represent a version string which enables the comparison and management of types and templates over time. Therefore, the TOSCA TC intends to provide a normative version type (string) for this purpose in future Working Drafts of this specification.
     
-    See the `TOSCA Simple Profile v1.0 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/csprd02/TOSCA-Simple-Profile-YAML-v1.0-csprd02.html#TYPE_TOSCA_VERSION>`__
+    See the `TOSCA Simple Profile v1.0 cos01 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#TYPE_TOSCA_VERSION>`__
     """
 
     RE = r'^(?P<major>\d+)\.(?P<minor>\d+)(\.(?P<fix>\d+)((\.(?P<qualifier>\d+))(\-(?P<build>\d+))?)?)?$'
@@ -205,28 +205,28 @@ class Range(object):
     """
     The range type can be used to define numeric ranges with a lower and upper boundary. For example, this allows for specifying a range of ports to be opened in a firewall.
     
-    See the `TOSCA Simple Profile v1.0 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/csprd02/TOSCA-Simple-Profile-YAML-v1.0-csprd02.html#TYPE_TOSCA_RANGE>`__
+    See the `TOSCA Simple Profile v1.0 cos01 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#TYPE_TOSCA_RANGE>`__
     """
 
     def __init__(self, entry_schema, constraints, value, aspect):
         if not isinstance(value, list):
-            raise ValueError('range value is not a list: %s' % repr(value))
+            raise ValueError('range value is not a list: %s' % safe_repr(value))
         if len(value) != 2:
-            raise ValueError('range value does not have exactly 2 elements: %s' % repr(value))
+            raise ValueError('range value does not have exactly 2 elements: %s' % safe_repr(value))
         
         try:
             value[0] = int(value[0])
         except ValueError:
-            raise ValueError('lower bound of range is not a valid integer: %s' % repr(value[0]))
+            raise ValueError('lower bound of range is not a valid integer: %s' % safe_repr(value[0]))
 
         if value[1] != 'UNBOUNDED':
             try:
                 value[1] = int(value[1])
             except ValueError:
-                raise ValueError('upper bound of range is not a valid integer or "UNBOUNDED": %s' % repr(value[0]))
+                raise ValueError('upper bound of range is not a valid integer or "UNBOUNDED": %s' % safe_repr(value[0]))
 
         if value[0] >= value[1]:
-            raise ValueError('upper bound of range is not greater than the lower bound: %s >= %s' % (repr(value[0]), repr(value[1])))
+            raise ValueError('upper bound of range is not greater than the lower bound: %s >= %s' % (safe_repr(value[0]), safe_repr(value[1])))
         
         self.value = value
     
@@ -247,13 +247,13 @@ class List(list):
     """
     The list type allows for specifying multiple values for a parameter of property. For example, if an application allows for being configured to listen on multiple ports, a list of ports could be configured using the list data type.
     
-    See the `TOSCA Simple Profile v1.0 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/csprd02/TOSCA-Simple-Profile-YAML-v1.0-csprd02.html#TYPE_TOSCA_LIST>`__
+    See the `TOSCA Simple Profile v1.0 cos01 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#TYPE_TOSCA_LIST>`__
     """
     
     @staticmethod
     def _create(context, presentation, entry_schema, constraints, value, aspect):
         if not isinstance(value, list):
-            raise ValueError('"list" data type value is not a list: %s' % repr(value))
+            raise ValueError('"list" data type value is not a list: %s' % safe_repr(value))
 
         entry_schema_type = entry_schema._get_type(context)
         entry_schema_constraints = entry_schema.constraints
@@ -275,13 +275,13 @@ class Map(StrictDict):
     """
     The map type allows for specifying multiple values for a parameter of property as a map. In contrast to the list type, where each entry can only be addressed by its index in the list, entries in a map are named elements that can be addressed by their keys.
     
-    See the `TOSCA Simple Profile v1.0 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/csprd02/TOSCA-Simple-Profile-YAML-v1.0-csprd02.html#TYPE_TOSCA_MAP>`__
+    See the `TOSCA Simple Profile v1.0 cos01 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#TYPE_TOSCA_MAP>`__
     """
     
     @staticmethod
     def _create(context, presentation, entry_schema, constraints, value, aspect):
         if not isinstance(value, dict):
-            raise ValueError('"map" data type value is not a dict: %s' % repr(value))
+            raise ValueError('"map" data type value is not a dict: %s' % safe_repr(value))
 
         if entry_schema is None:
             raise ValueError('"map" data type does not define "entry_schema"')
@@ -310,7 +310,7 @@ class Scalar(object):
     """
     The scalar-unit type can be used to define scalar values along with a unit from the list of recognized units.
     
-    See the `TOSCA Simple Profile v1.0 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/csprd02/TOSCA-Simple-Profile-YAML-v1.0-csprd02.html#TYPE_TOSCA_SCALAR_UNIT>`__
+    See the `TOSCA Simple Profile v1.0 cos01 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#TYPE_TOSCA_SCALAR_UNIT>`__
     """
 
     @staticmethod
@@ -322,34 +322,43 @@ class Scalar(object):
     
     def __init__(self, entry_schema, constraints, value, aspect):
         value = str(value)
-        match = re.match(self.__class__.RE, value)
+        match = re.match(self.RE, value)
         if match is None:
-            raise ValueError('scalar be formatted as <scalar> <unit>')
+            raise ValueError('scalar must be formatted as <scalar> <unit>')
+
+        scalar = float(match.group('scalar'))
+        unit = match.group('unit')
+
+        unit_lower = unit.lower() 
+        units_lower = {k.lower(): v for k, v in self.UNITS.iteritems()}
+        factor = units_lower.get(unit_lower)
+        if factor is None:
+            raise ValueError('scalar specified with unsupported unit: %s' % safe_repr(unit))
         
-        self.scalar = float(match.group('scalar'))
-        self.unit = match.group('unit')
-        self.value = self.__class__.TYPE(self.scalar * self.__class__.UNITS[self.unit])
+        self.value = self.TYPE(scalar * factor)
     
     @property
     def as_raw(self):
         return self.value
 
     def __str__(self):
-        return '%s %s' % (self.value, self.__class__.UNIT)
+        return '%s %s' % (self.value, self.UNIT)
 
     def __repr__(self):
         return repr(self.__str__())
     
     def __eq__(self, scalar):
-        if not isinstance(scalar, Scalar):
-            return False
-        return self.value == scalar.value
+        if isinstance(scalar, Scalar):
+            value = scalar.value
+        else:
+            value = self.TYPE(scalar)
+        return self.value == value
 
     def __lt__(self, scalar):
         if isinstance(scalar, Scalar):
             value = scalar.value
         else:
-            value = self.__class__.TYPE(scalar)
+            value = self.TYPE(scalar)
         return self.value < value
 
 @dsl_specification('3.2.6.4', 'tosca-simple-profile-1.0')
@@ -357,7 +366,7 @@ class ScalarSize(Scalar):
     """
     Integer scalar for counting bytes.
     
-    See the `TOSCA Simple Profile v1.0 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/csprd02/TOSCA-Simple-Profile-YAML-v1.0-csprd02.html#TYPE_TOSCA_SCALAR_UNIT_SIZE>`__
+    See the `TOSCA Simple Profile v1.0 cos01 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#TYPE_TOSCA_SCALAR_UNIT_SIZE>`__
     """
 
     # See: http://www.regular-expressions.info/floatingpoint.html
@@ -382,7 +391,7 @@ class ScalarTime(Scalar):
     """
     Floating point scalar for counting seconds.
     
-    See the `TOSCA Simple Profile v1.0 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/csprd02/TOSCA-Simple-Profile-YAML-v1.0-csprd02.html#TYPE_TOSCA_SCALAR_UNIT_TIME>`__
+    See the `TOSCA Simple Profile v1.0 cos01 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#TYPE_TOSCA_SCALAR_UNIT_TIME>`__
     """
     
     # See: http://www.regular-expressions.info/floatingpoint.html
@@ -405,7 +414,7 @@ class ScalarFrequency(Scalar):
     """
     Floating point scalar for counting cycles per second (Hz).
 
-    See the `TOSCA Simple Profile v1.0 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/csprd02/TOSCA-Simple-Profile-YAML-v1.0-csprd02.html#TYPE_TOSCA_SCALAR_UNIT_FREQUENCY>`__
+    See the `TOSCA Simple Profile v1.0 cos01 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#TYPE_TOSCA_SCALAR_UNIT_FREQUENCY>`__
     """
     
     # See: http://www.regular-expressions.info/floatingpoint.html

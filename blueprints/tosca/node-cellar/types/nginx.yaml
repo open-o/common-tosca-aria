@@ -14,15 +14,14 @@
 # under the License.
 #
 
-import urlparse, os
+node_types:
 
-def as_file(uri):
-    """
-    If the URI is a file (either the :code:`file` scheme or no scheme), then returns the absolute
-    path. Otherwise, returns None.
-    """
-    
-    url = urlparse.urlparse(uri)
-    if (not url.scheme) or (url.scheme == 'file'):
-        return os.path.abspath(url.path)
-    return None
+  nginx.LoadBalancer:
+    description: >-
+      Nginx as a loadbalancer.
+    derived_from: tosca.nodes.LoadBalancer
+    requirements:
+      - host:
+          capability: tosca.capabilities.Container
+          node: tosca.nodes.Compute
+          relationship: tosca.relationships.HostedOn

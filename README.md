@@ -9,22 +9,25 @@ On its own, ARIA provides built-in tools for blueprint validation and for creati
 service instances. 
 
 ARIA adheres strictly and meticulously to the
-[TOSCA Simple Profile v1.0 specification](http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/csprd02/TOSCA-Simple-Profile-YAML-v1.0-csprd02.html),
+[TOSCA Simple Profile v1.0 cos01 specification](http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html),
 providing state-of-the-art validation at seven different levels:
 
-0. Platform errors. E.g. network, hardware, or even an internal bug in ARIA (let us know,
-   please!).
-1. Syntax and format errors. E.g. non-compliant YAML, XML, JSON.
-2. Field validation. E.g. assigning a string where an integer is expected, using a list
-   instead of a dict.
-3. Relationships between fields within a type. This is "grammar" as it applies to rules for
-   setting the values of fields in relation to each other.
-4. Relationships between types. E.g. referring to an unknown type, causing a type inheritance
-   loop. 
-5. Topology. These errors happen if requirements and capabilities cannot be matched in order
-   to assemble a valid topology.
-6. External dependencies. These errors happen if requirement/capability matching fails due to
-   external resources missing, e.g. the lack of a valid virtual machine, API credentials, etc. 
+<ol start="0">
+<li>Platform errors. E.g. network, hardware, or even an internal bug in ARIA (let us know,
+    please!).</li>
+<li>Syntax and format errors. E.g. non-compliant YAML, XML, JSON.</li>
+<li>Field validation. E.g. assigning a string where an integer is expected, using a list
+    instead of a dict.</li>
+<li>Relationships between fields within a type. This is "grammar" as it applies to rules for
+    setting the values of fields in relation to each other.</li>
+<li>Relationships between types. E.g. referring to an unknown type, causing a type inheritance
+    loop.</li>
+<li>Topology. These errors happen if requirements and capabilities cannot be matched in order
+    to assemble a valid topology.</li>
+<li>External dependencies. These errors happen if requirement/capability matching fails due to
+    external resources missing, e.g. the lack of a valid virtual machine, API credentials, etc.
+    </li> 
+</ol>
 
 Validation errors include a plain English message and when relevant the exact location (file,
 row, column) of the data the caused the error.
@@ -46,24 +49,24 @@ You need Python v2.7. Python v3 is not currently supported. Use a [virtualenv](h
 
 Now create a service instance from a TOSCA blueprint:
 
-	aria blueprints/tosca/node-cellar.yaml
+	aria blueprints/tosca/node-cellar/node-cellar.yaml
 	
 You can also get it in JSON or YAML formats:
 
-	aria blueprints/tosca/node-cellar.yaml --json
+	aria blueprints/tosca/node-cellar/node-cellar.yaml --json
 
 Or get an overview of the relationship graph:
 
-	aria blueprints/tosca/node-cellar.yaml --graph
+	aria blueprints/tosca/node-cellar/node-cellar.yaml --graph
 
 You can provide inputs as JSON, overriding default values provided in the blueprint
 
-	aria blueprints/tosca/node-cellar.yaml --inputs='{"openstack_credential": {"user": "username"}}'
+	aria blueprints/tosca/node-cellar/node-cellar.yaml --inputs='{"openstack_credential": {"user": "username"}}'
 
 Instead of providing them explicitly, you can also provide them in a file or URL, in either
 JSON or YAML. If you do so, the value must end in ".json" or ".yaml":
 
-	aria blueprints/tosca/node-cellar.yaml --inputs=blueprints/tosca/inputs.yaml
+	aria blueprints/tosca/node-cellar/node-cellar.yaml --inputs=blueprints/tosca/inputs.yaml
 
 
 API Architecture
@@ -117,7 +120,7 @@ CLI Tool
 Though ARIA is fully exposed as an API, it also comes with a CLI tool to allow you to
 work from the shell:
 
-	aria blueprints/tosca/node-cellar.yaml instance
+	aria blueprints/tosca/node-cellar/node-cellar.yaml instance
 
 The CLI supports the following commands to create variations of the default consumer
 chain:
@@ -154,26 +157,26 @@ wire:
 
 With the server started, you can hit a few endpoints:
 
-    curl http://localhost:8204/openoapi/tosca/v1/instance/blueprints/tosca/node-cellar.yaml
+    curl http://localhost:8204/openoapi/tosca/v1/instance/blueprints/tosca/node-cellar/node-cellar.yaml
     
-    curl http://localhost:8204/openoapi/tosca/v1/validate/blueprints/tosca/node-cellar.yaml
+    curl http://localhost:8204/openoapi/tosca/v1/validate/blueprints/tosca/node-cellar/node-cellar.yaml
 
 You will get a JSON response with a service instance or validation issues.
 
 You can send inputs:
 
-	curl http://localhost:8204/openoapi/tosca/v1/instance/blueprints/tosca/node-cellar.yaml?inputs=%7B%22openstack_credential%22%3A%7B%22user%22%3A%22username%22%7D%7D
+	curl http://localhost:8204/openoapi/tosca/v1/instance/blueprints/tosca/node-cellar/node-cellar.yaml?inputs=%7B%22openstack_credential%22%3A%7B%22user%22%3A%22username%22%7D%7D
 
-	curl http://localhost:8204/openoapi/tosca/v1/instance/blueprints/tosca/node-cellar.yaml?inputs=blueprints/tosca/inputs.yaml
+	curl http://localhost:8204/openoapi/tosca/v1/instance/blueprints/tosca/node-cellar/node-cellar.yaml?inputs=blueprints/tosca/inputs.yaml
 
 You can also POST a blueprint over the wire:
 
-    curl --data-binary @blueprints/tosca/node-cellar.yaml http://localhost:8204/openoapi/tosca/v1/instance
+    curl --data-binary @blueprints/tosca/node-cellar/node-cellar.yaml http://localhost:8204/openoapi/tosca/v1/instance
 
-If you POST and also want to import from the filesystem, note that you must specify search
-paths when you start the server:
+If you POST and also want to import from specific prefixes (in the filesystem or URIs), you
+can specify them when you start the server:
 
-    aria-rest --path blueprints/tosca /another/path/to/imports
+    aria-rest --prefix /path/to/imports http://myorg.org/imports
 
 
 Generator (Extension)
@@ -201,7 +204,7 @@ You do not want to install with `pip`, but instead work directly with the source
 
 You can then run the scripts in the main directory:
 
-	./aria blueprints/tosca/node-cellar.yaml instance
+	./aria blueprints/tosca/node-cellar/node-cellar.yaml
     ./aria-rest
 
 To run tests:
@@ -211,3 +214,28 @@ To run tests:
 To build the documentation:
 
 	make docs
+
+Here's a quick example of using the API to parse a given string:
+
+	from aria import install_aria_extensions
+	from aria.consumption import ConsumptionContext, ConsumerChain, Read, Validate, Model, Instance
+	from aria.loading import LiteralLocation
+	
+	install_aria_extensions()
+	
+	def parse_text(payload, file_search_paths=[]):
+	    context = ConsumptionContext()
+	    context.presentation.location = LiteralLocation(payload)
+	    context.loading.file_search_paths += file_search_paths
+	    ConsumerChain(context, (Read, Validate, Model, Instance)).consume()
+	    if not context.validation.dump_issues():
+	        return context.modeling.instance
+	    return None
+
+	print parse_text("""
+	tosca_definitions_version: tosca_simple_yaml_1_0
+	topology_template:
+	  node_templates:
+	    MyNode:
+	      type: tosca.nodes.Compute 
+	""")

@@ -18,9 +18,9 @@ from __future__ import absolute_import # so we can import standard 'types'
 
 from .shared_elements import Element, ModelElement, Parameter, Interface, Operation, Artifact, GroupPolicy
 from .instance_elements import ServiceInstance, Node, Capability, Relationship, Group, Policy, Mapping, Substitution
-from .utils import validate_dict_values, validate_list_values, instantiate_dict, dump_list_values, dump_dict_values, dump_properties, dump_interfaces
+from .utils import validate_dict_values, validate_list_values, coerce_dict_values, coerce_list_values, instantiate_dict, dump_list_values, dump_dict_values, dump_properties, dump_interfaces
 from ..validation import Issue
-from ..utils import StrictList, StrictDict, puts, as_raw
+from ..utils import StrictList, StrictDict, puts, safe_repr, as_raw
 from collections import OrderedDict
 from types import FunctionType
 
@@ -113,6 +113,18 @@ class ServiceModel(ModelElement):
         validate_dict_values(context, self.outputs)
         validate_dict_values(context, self.operations)
 
+    def coerce_values(self, context, container, report_issues):
+        if self.metadata is not None:
+            self.metadata.coerce_values(context, container, report_issues)
+        coerce_dict_values(context, container, self.node_templates, report_issues)
+        coerce_dict_values(context, container, self.group_templates, report_issues)
+        coerce_dict_values(context, container, self.policy_templates, report_issues)
+        if self.substitution_template is not None:
+            self.substitution_template.coerce_values(context, container, report_issues)
+        coerce_dict_values(context, container, self.inputs, report_issues)
+        coerce_dict_values(context, container, self.outputs, report_issues)
+        coerce_dict_values(context, container, self.operations, report_issues)
+
     def dump(self, context):
         if self.description is not None:
             puts('Description: %s' % context.style.meta(self.description))
@@ -198,13 +210,20 @@ class NodeTemplate(ModelElement):
     
     def validate(self, context):
         if context.modeling.node_types.get_descendant(self.type_name) is None:
-            context.validation.report('node template "%s" has an unknown type: %s' % (self.name, repr(self.type_name)), level=Issue.BETWEEN_TYPES)  
+            context.validation.report('node template "%s" has an unknown type: %s' % (self.name, safe_repr(self.type_name)), level=Issue.BETWEEN_TYPES)  
 
         validate_dict_values(context, self.properties)
         validate_dict_values(context, self.interfaces)
         validate_dict_values(context, self.artifacts)
         validate_dict_values(context, self.capabilities)
         validate_list_values(context, self.requirements)
+    
+    def coerce_values(self, context, container, report_issues):
+        coerce_dict_values(context, self, self.properties, report_issues)
+        coerce_dict_values(context, self, self.interfaces, report_issues)
+        coerce_dict_values(context, self, self.artifacts, report_issues)
+        coerce_dict_values(context, self, self.capabilities, report_issues)
+        coerce_list_values(context, self, self.requirements, report_issues)
     
     def dump(self, context):
         puts('Node template: %s' % context.style.node(self.name))
@@ -312,12 +331,16 @@ class Requirement(Element):
 
     def validate(self, context):
         if (self.target_node_type_name) and (context.modeling.node_types.get_descendant(self.target_node_type_name) is None):
-            context.validation.report('requirement "%s" refers to an unknown node type: %s' % (self.name, repr(self.target_node_type_name)), level=Issue.BETWEEN_TYPES)        
+            context.validation.report('requirement "%s" refers to an unknown node type: %s' % (self.name, safe_repr(self.target_node_type_name)), level=Issue.BETWEEN_TYPES)        
         if (self.target_capability_type_name) and (context.modeling.capability_types.get_descendant(self.target_capability_type_name) is None):
-            context.validation.report('requirement "%s" refers to an unknown capability type: %s' % (self.name, repr(self.target_capability_type_name)), level=Issue.BETWEEN_TYPES)        
+            context.validation.report('requirement "%s" refers to an unknown capability type: %s' % (self.name, safe_repr(self.target_capability_type_name)), level=Issue.BETWEEN_TYPES)        
 
         if self.relationship_template:
             self.relationship_template.validate(context)
+
+    def coerce_values(self, context, container, report_issues):
+        if self.relationship_template is not None:
+            self.relationship_template.coerce_values(context, container, report_issues)
 
     def dump(self, context):
         if self.name:
@@ -407,9 +430,12 @@ class CapabilityTemplate(ModelElement):
 
     def validate(self, context):
         if context.modeling.capability_types.get_descendant(self.type_name) is None:
-            context.validation.report('capability "%s" refers to an unknown type: %s' % (self.name, repr(self.type)), level=Issue.BETWEEN_TYPES)        
+            context.validation.report('capability "%s" refers to an unknown type: %s' % (self.name, safe_repr(self.type)), level=Issue.BETWEEN_TYPES)        
 
         validate_dict_values(context, self.properties)
+
+    def coerce_values(self, context, container, report_issues):
+        coerce_dict_values(context, self, self.properties, report_issues)
 
     def dump(self, context):
         puts(context.style.node(self.name))
@@ -466,11 +492,16 @@ class RelationshipTemplate(ModelElement):
 
     def validate(self, context):
         if context.modeling.relationship_types.get_descendant(self.type_name) is None:
-            context.validation.report('relationship template "%s" has an unknown type: %s' % (self.name, repr(self.type_name)), level=Issue.BETWEEN_TYPES)        
+            context.validation.report('relationship template "%s" has an unknown type: %s' % (self.name, safe_repr(self.type_name)), level=Issue.BETWEEN_TYPES)        
 
         validate_dict_values(context, self.properties)
         validate_dict_values(context, self.source_interfaces)
         validate_dict_values(context, self.target_interfaces)
+
+    def coerce_values(self, context, container, report_issues):
+        coerce_dict_values(context, self, self.properties, report_issues)
+        coerce_dict_values(context, self, self.source_interfaces, report_issues)
+        coerce_dict_values(context, self, self.target_interfaces, report_issues)
 
     def dump(self, context):
         if self.type_name is not None:
@@ -538,11 +569,16 @@ class GroupTemplate(ModelElement):
 
     def validate(self, context):
         if context.modeling.group_types.get_descendant(self.type_name) is None:
-            context.validation.report('group template "%s" has an unknown type: %s' % (self.name, repr(self.type_name)), level=Issue.BETWEEN_TYPES)        
+            context.validation.report('group template "%s" has an unknown type: %s' % (self.name, safe_repr(self.type_name)), level=Issue.BETWEEN_TYPES)        
 
         validate_dict_values(context, self.properties)
         validate_dict_values(context, self.interfaces)
         validate_dict_values(context, self.policies)
+
+    def coerce_values(self, context, container, report_issues):
+        coerce_dict_values(context, self, self.properties, report_issues)
+        coerce_dict_values(context, self, self.interfaces, report_issues)
+        coerce_dict_values(context, self, self.policies, report_issues)
 
     def dump(self, context):
         puts('Group template: %s' % context.style.node(self.name))
@@ -600,9 +636,12 @@ class PolicyTemplate(ModelElement):
 
     def validate(self, context):
         if context.modeling.policy_types.get_descendant(self.type_name) is None:
-            context.validation.report('policy template "%s" has an unknown type: %s' % (self.name, repr(self.type_name)), level=Issue.BETWEEN_TYPES)        
+            context.validation.report('policy template "%s" has an unknown type: %s' % (self.name, safe_repr(self.type_name)), level=Issue.BETWEEN_TYPES)        
 
         validate_dict_values(context, self.properties)
+
+    def coerce_values(self, context, container, report_issues):
+        coerce_dict_values(context, self, self.properties, report_issues)
 
     def dump(self, context):
         puts('Policy template: %s' % context.style.node(self.name))
@@ -653,7 +692,7 @@ class MappingTemplate(ModelElement):
 
     def validate(self, context):
         if self.node_template_name not in context.modeling.model.node_templates:
-            context.validation.report('mapping "%s" refers to an unknown node template: %s' % (self.mapped_name, repr(self.node_template_name)), level=Issue.BETWEEN_TYPES)        
+            context.validation.report('mapping "%s" refers to an unknown node template: %s' % (self.mapped_name, safe_repr(self.node_template_name)), level=Issue.BETWEEN_TYPES)        
 
     def dump(self, context):
         puts('%s -> %s.%s' % (context.style.node(self.mapped_name), context.style.node(self.node_template_name), context.style.node(self.name)))
@@ -692,10 +731,14 @@ class SubstitutionTemplate(ModelElement):
 
     def validate(self, context):
         if context.modeling.node_types.get_descendant(self.node_type_name) is None:
-            context.validation.report('substitution template has an unknown type: %s' % repr(self.node_type_name), level=Issue.BETWEEN_TYPES)        
+            context.validation.report('substitution template has an unknown type: %s' % safe_repr(self.node_type_name), level=Issue.BETWEEN_TYPES)        
 
         validate_dict_values(context, self.capabilities)
         validate_dict_values(context, self.requirements)
+
+    def coerce_values(self, context, container, report_issues):
+        coerce_dict_values(context, self, self.capabilities, report_issues)
+        coerce_dict_values(context, self, self.requirements, report_issues)
 
     def dump(self, context):
         puts('Substitution:')

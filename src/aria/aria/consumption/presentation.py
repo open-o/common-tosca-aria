@@ -22,7 +22,7 @@ from ..presentation import PresenterNotFoundError
 
 class Read(Consumer):
     """
-    Reads the presentation.
+    Reads the presentation, handling imports recursively.
     
     It works by consuming a data source via appropriate :class:`aria.loader.Loader`,
     :class:`aria.reader.Reader`, and :class:`aria.presenter.Presenter` instances.
@@ -108,7 +108,7 @@ class Read(Consumer):
             
         # Submit imports to executor
         if hasattr(presentation, '_get_import_locations'):
-            import_locations = presentation._get_import_locations()
+            import_locations = presentation._get_import_locations(self.context)
             if import_locations:
                 for import_location in import_locations:
                     # The imports inherit the parent presenter class and use the current location as their origin location
