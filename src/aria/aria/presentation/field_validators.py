@@ -14,21 +14,25 @@
 # under the License.
 #
 
-from .utils import report_issue_for_unknown_type, report_issue_for_parent_is_self, report_issue_for_unknown_parent_type, report_issue_for_circular_type_hierarchy
+from .utils import parse_types_dict_names, report_issue_for_unknown_type, report_issue_for_parent_is_self, report_issue_for_unknown_parent_type, report_issue_for_circular_type_hierarchy
 from ..validation import Issue
-from types import FunctionType
 
 def type_validator(type_name, *types_dict_names):
     """
     Makes sure that the field refers to an existing type defined in the root presenter.
     
+    The arguments from the second onwards are used to locate a nested field under
+    :code:`service_template` under the root presenter. The first of these can optionally
+    be a function, in which case it will be called to convert type names. This can be used
+    to support shorthand type names, aliases, etc.    
+    
     Can be used with the :func:`field_validator` decorator.
     """
 
-    types_dict_names, convert = _parse_types_dict_names(types_dict_names)
+    types_dict_names, convert = parse_types_dict_names(types_dict_names)
     
     def validator_fn(field, presentation, context):
-        field._validate(presentation, context)
+        field.default_validate(presentation, context)
 
         # Make sure type exists
         value = getattr(presentation, field.name)
@@ -36,7 +40,7 @@ def type_validator(type_name, *types_dict_names):
             types_dict = context.presentation.get('service_template', *types_dict_names) or {}
 
             if convert:
-                value = convert(context, types_dict, value)
+                value = convert(context, value, types_dict)
 
             if value not in types_dict:
                 report_issue_for_unknown_type(context, presentation, type_name, field.name)
@@ -49,13 +53,18 @@ def list_type_validator(type_name, *types_dict_names):
     
     Assumes that the field is a list.
     
+    The arguments from the second onwards are used to locate a nested field under
+    :code:`service_template` under the root presenter. The first of these can optionally
+    be a function, in which case it will be called to convert type names. This can be used
+    to support shorthand type names, aliases, etc.    
+    
     Can be used with the :func:`field_validator` decorator.
     """
 
-    types_dict_names, convert = _parse_types_dict_names(types_dict_names)
+    types_dict_names, convert = parse_types_dict_names(types_dict_names)
 
     def validator_fn(field, presentation, context):
-        field._validate(presentation, context)
+        field.default_validate(presentation, context)
         
         # Make sure types exist
         values = getattr(presentation, field.name)
@@ -64,7 +73,7 @@ def list_type_validator(type_name, *types_dict_names):
 
             for value in values:
                 if convert:
-                    value = convert(context, types_dict, value)
+                    value = convert(context, value, types_dict)
     
                 if value not in types_dict:
                     report_issue_for_unknown_type(context, presentation, type_name, field.name)
@@ -81,7 +90,7 @@ def list_length_validator(length):
     """
 
     def validator_fn(field, presentation, context):
-        field._validate(presentation, context)
+        field.default_validate(presentation, context)
         
         # Make sure list has exactly the length
         values = getattr(presentation, field.name)
@@ -95,21 +104,27 @@ def derived_from_validator(*types_dict_names):
     """
     Makes sure that the field refers to a valid parent type defined in the root presenter.
     
+    Checks that we do not derive from ourselves and that we do not cause a circular hierarchy.
+    
+    The arguments are used to locate a nested field under
+    :code:`service_template` under the root presenter. The first of these can optionally
+    be a function, in which case it will be called to convert type names. This can be used
+    to support shorthand type names, aliases, etc.    
+    
     Can be used with the :func:`field_validator` decorator.
-
     """
 
-    types_dict_names, convert = _parse_types_dict_names(types_dict_names)
+    types_dict_names, convert = parse_types_dict_names(types_dict_names)
 
     def validator_fn(field, presentation, context):
-        field._validate(presentation, context)
+        field.default_validate(presentation, context)
 
         value = getattr(presentation, field.name)
         if value is not None:
             types_dict = context.presentation.get('service_template', *types_dict_names) or {}
             
             if convert:
-                value = convert(context, types_dict, value)
+                value = convert(context, value, types_dict)
             
             # Make sure not derived from self
             if value == presentation._name:
@@ -124,7 +139,7 @@ def derived_from_validator(*types_dict_names):
                 while p.derived_from is not None:
                     derived_from = p.derived_from
                     if convert:
-                        derived_from = convert(context, types_dict, derived_from)
+                        derived_from = convert(context, derived_from, types_dict)
 
                     if derived_from == p._name:
                         # This should cause a validation issue at that type
@@ -139,14 +154,3 @@ def derived_from_validator(*types_dict_names):
                     hierarchy.append(p._name)
 
     return validator_fn
-
-#
-# Utils
-#
-
-def _parse_types_dict_names(types_dict_names):
-    convert = None
-    if isinstance(types_dict_names[0], FunctionType):
-        convert = types_dict_names[0]
-        types_dict_names = types_dict_names[1:]
-    return types_dict_names, convert

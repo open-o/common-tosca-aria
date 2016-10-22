@@ -19,8 +19,8 @@ from .modeling.properties import get_inherited_property_definitions
 from .modeling.interfaces import get_inherited_interface_definitions
 from .modeling.relationships import get_relationship_inherited_property_definitions
 from aria import dsl_specification
-from aria.presentation import Presentation, has_fields, primitive_field, object_dict_field, field_validator, derived_from_validator
-from aria.utils import ReadOnlyDict, cachedmethod
+from aria.presentation import Presentation, has_fields, primitive_field, object_dict_field, field_validator, derived_from_validator, get_parent_presentation
+from aria.utils import FrozenDict, cachedmethod
 
 @has_fields
 @dsl_specification('node-types', 'cloudify-1.0')
@@ -66,15 +66,15 @@ class NodeType(Presentation):
 
     @cachedmethod
     def _get_parent(self, context):
-        return context.presentation.get_from_dict('service_template', 'node_types', self.derived_from)
+        return get_parent_presentation(context, self, 'node_types')
 
     @cachedmethod
     def _get_properties(self, context):
-        return ReadOnlyDict(get_inherited_property_definitions(context, self, 'properties'))
+        return FrozenDict(get_inherited_property_definitions(context, self, 'properties'))
 
     @cachedmethod
     def _get_interfaces(self, context):
-        return ReadOnlyDict(get_inherited_interface_definitions(context, self, 'node type', 'interfaces'))
+        return FrozenDict(get_inherited_interface_definitions(context, self, 'node type', 'interfaces'))
 
     def _validate(self, context):
         super(NodeType, self)._validate(context)
@@ -133,19 +133,19 @@ class RelationshipType(Presentation):
 
     @cachedmethod
     def _get_parent(self, context):
-        return context.presentation.get_from_dict('service_template', 'relationships', self.derived_from)
+        return get_parent_presentation(context, self, 'relationships')
 
     @cachedmethod
     def _get_properties(self, context):
-        return ReadOnlyDict(get_relationship_inherited_property_definitions(context, self))
+        return FrozenDict(get_relationship_inherited_property_definitions(context, self))
 
     @cachedmethod
     def _get_source_interfaces(self, context):
-        return ReadOnlyDict(get_inherited_interface_definitions(context, self, 'relationship type', 'source_interfaces'))
+        return FrozenDict(get_inherited_interface_definitions(context, self, 'relationship type', 'source_interfaces'))
 
     @cachedmethod
     def _get_target_interfaces(self, context):
-        return ReadOnlyDict(get_inherited_interface_definitions(context, self, 'relationship type', 'target_interfaces'))
+        return FrozenDict(get_inherited_interface_definitions(context, self, 'relationship type', 'target_interfaces'))
 
     def _validate(self, context):
         super(RelationshipType, self)._validate(context)
@@ -156,8 +156,6 @@ class RelationshipType(Presentation):
 @has_fields
 @dsl_specification('policy-types', 'cloudify-1.0')
 @dsl_specification('policy-types', 'cloudify-1.1')
-@dsl_specification('policy-types', 'cloudify-1.2')
-@dsl_specification('policy-types', 'cloudify-1.3')
 class PolicyType(Presentation):
     """
     :code:`policies` provide a way of analyzing a stream of events that correspond to a group of nodes (and their instances).
@@ -200,8 +198,6 @@ class PolicyType(Presentation):
 @has_fields
 @dsl_specification('policy-triggers', 'cloudify-1.0')
 @dsl_specification('policy-triggers', 'cloudify-1.1')
-@dsl_specification('policy-triggers', 'cloudify-1.2')
-@dsl_specification('policy-triggers', 'cloudify-1.3')
 class GroupPolicyTriggerType(Presentation):
     """
     :code:`policy_triggers` specify the implementation of actions invoked by policies and declare the properties that define the trigger's behavior.

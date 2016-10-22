@@ -1,17 +1,18 @@
-########
-# Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#        http://www.apache.org/licenses/LICENSE-2.0
-#
+# Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved.
+# 
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+# 
+#      http://www.apache.org/licenses/LICENSE-2.0
+# 
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    * See the License for the specific language governing permissions and
-#    * limitations under the License.
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
 
 import itertools
 import random
@@ -19,7 +20,7 @@ import random
 from mock import patch
 
 from dsl_parser import exceptions
-from dsl_parser.tests import scaling
+from cloudify import scaling
 
 
 class TestMultiInstance(scaling.BaseTestMultiInstance):
@@ -415,8 +416,11 @@ class TestMultiInstance(scaling.BaseTestMultiInstance):
                 properties:
                     connection_type: invalid
 """
-        self.assertRaises(exceptions.IllegalConnectedToConnectionType,
-                          self.parse_multi, yaml)
+        self.assert_parser_issue_messages(
+            dsl_string=yaml,
+            parsing_method=self.parse_multi,
+            issue_messages=['"connection_type" property is not "all_to_all" or "all_to_one" '
+                            'in relationship in node template "db":'])
 
     def test_unsupported_relationship(self):
         yaml = self.BASE_BLUEPRINT + """
@@ -444,7 +448,7 @@ node_templates:
 node_types:
   type: {1}
 '''.format(instances, '{}')
-        with patch('dsl_parser.rel_graph._generate_id',
+        with patch('cloudify.framework.rel_graph._generate_id',
                    lambda: random.randint(1, instances)):
             plan = self.parse_multi(blueprint)
         self.assertEqual(instances, len(plan['node_instances']))

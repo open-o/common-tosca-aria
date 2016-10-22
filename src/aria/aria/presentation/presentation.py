@@ -15,16 +15,17 @@
 #
 
 from .null import none_to_null
-from .utils import get_locator, validate_no_short_form, validate_no_unknown_fields, validate_known_fields
-from ..utils import HasCachedMethods, full_type_name, deepcopy_with_locators, puts
+from .utils import get_locator, validate_no_short_form, validate_no_unknown_fields, validate_known_fields, validate_primitive
+from ..validation import Issue
+from ..utils import HasCachedMethods, full_type_name, deepcopy_with_locators, puts, safe_repr
 
 class Value(object):
     """
     Encapsulates a typed value assignment.
     """
     
-    def __init__(self, the_type, value, description):
-        self.type = deepcopy_with_locators(the_type)
+    def __init__(self, type_name, value, description):
+        self.type = deepcopy_with_locators(type_name)
         self.value = deepcopy_with_locators(value)
         self.description = deepcopy_with_locators(description)
 
@@ -74,6 +75,31 @@ class PresentationBase(HasCachedMethods):
         """
         
         return get_locator(self._raw, self._container)
+
+    def _get(self, *names):
+        """
+        Gets attributes recursively.
+        """
+        
+        o = self
+        if (o is not None) and names:
+            for name in names:
+                o = getattr(o, name, None)
+                if o is None:
+                    break
+        return o
+
+    def _get_from_dict(self, *names):
+        """
+        Gets attributes recursively, except for the last name which is used
+        to get a value from the last dict.
+        """
+
+        if names:
+            o = self._get(*names[:-1])
+            if isinstance(o, dict):
+                return o.get(names[-1])
+        return None
 
     def _get_child_locator(self, *names):
         """
@@ -158,16 +184,18 @@ class Presentation(PresentationBase):
     """
     
     def _validate(self, context):
-        validate_no_short_form(self, context)
-        validate_no_unknown_fields(self, context)
-        validate_known_fields(self, context)
+        validate_no_short_form(context, self)
+        validate_no_unknown_fields(context, self)
+        validate_known_fields(context, self)
 
 class AsIsPresentation(PresentationBase):
     """
     Base class for trivial ARIA presentations that provide the raw value as is.
     """
-    
-    # TODO: support type coercion
+
+    def __init__(self, name=None, raw=None, container=None, cls=None):
+        super(AsIsPresentation, self).__init__(name, raw, container)
+        self.cls = cls
     
     @property
     def value(self):
@@ -176,6 +204,20 @@ class AsIsPresentation(PresentationBase):
     @value.setter
     def value(self, value):
         self._raw = value
+
+    @property
+    def _full_cls_name(self):
+        name = full_type_name(self.cls) if self.cls is not None else None
+        if name == 'unicode':
+            # For simplicity, display "unicode" as "str"
+            name = 'str'
+        return name
+
+    def _validate(self, context):
+        try:
+            validate_primitive(self._raw, self.cls, context.validation.allow_primitive_coersion)
+        except ValueError as e:
+            context.validation.report('"%s" is not a valid "%s": %s' % (self._fullname, self._full_cls_name, safe_repr(self._raw)), locator=self._locator, level=Issue.FIELD, exception=e)
 
     def _dump(self, context):
         if hasattr(self._raw, '_dump'):

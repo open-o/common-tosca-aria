@@ -16,9 +16,8 @@
 
 from ..v1_0.functions import parse_string_expression
 from aria import InvalidValueError, dsl_specification
-from aria.modeling import Function
-from aria.utils import ReadOnlyList, as_raw, safe_repr
-from cStringIO import StringIO
+from aria.modeling import Function, CannotEvaluateFunctionException
+from aria.utils import FrozenList, as_raw, safe_repr
 
 @dsl_specification('intrinsic-functions-1', 'cloudify-1.1')
 @dsl_specification('intrinsic-functions-1', 'cloudify-1.2')
@@ -39,7 +38,7 @@ class Concat(Function):
         string_expressions = []
         for index in range(len(argument)):
             string_expressions.append(parse_string_expression(context, presentation, 'concat', index, None, argument[index]))
-        self.string_expressions = ReadOnlyList(string_expressions)    
+        self.string_expressions = FrozenList(string_expressions)    
 
     @property
     def as_raw(self):
@@ -51,9 +50,4 @@ class Concat(Function):
         return {'concat': string_expressions}
 
     def _evaluate(self, context, container):
-        r = StringIO()
-        for e in self.string_expressions:
-            if hasattr(e, '_evaluate'):
-                e = e._evaluate(context, container)
-            r.write(str(e))
-        return r.getvalue()
+        raise CannotEvaluateFunctionException()

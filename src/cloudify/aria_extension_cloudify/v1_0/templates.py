@@ -24,13 +24,10 @@ from .modeling.relationships import get_relationship_assigned_and_defined_proper
 from .modeling.node_templates import get_node_template_scalable
 from aria import dsl_specification
 from aria.presentation import Presentation, has_fields, primitive_field, primitive_list_field, object_field, object_list_field, object_dict_field, field_validator, type_validator, list_type_validator
-from aria.utils import ReadOnlyDict, cachedmethod
+from aria.utils import FrozenDict, cachedmethod
 
 @has_fields
 @dsl_specification('relationships-1', 'cloudify-1.0')
-@dsl_specification('relationships-1', 'cloudify-1.1')
-@dsl_specification('relationships-1', 'cloudify-1.2')
-@dsl_specification('relationships-1', 'cloudify-1.3')
 class RelationshipTemplate(Presentation):
     """
     :code:`relationships` let you define how nodes relate to one another. For example, a :code:`web_server` node can be :code:`contained_in` a :code:`vm` node or an :code:`application` node can be :code:`connected_to` a :code:`database` node.
@@ -94,15 +91,15 @@ class RelationshipTemplate(Presentation):
 
     @cachedmethod
     def _get_property_values(self, context):
-        return ReadOnlyDict(get_relationship_assigned_and_defined_property_values(context, self))
+        return FrozenDict(get_relationship_assigned_and_defined_property_values(context, self))
 
     @cachedmethod
     def _get_source_interfaces(self, context):
-        return ReadOnlyDict(get_template_interfaces(context, self, 'relationship template', 'source_interfaces', '_get_source_interfaces'))
+        return FrozenDict(get_template_interfaces(context, self, 'relationship template', 'source_interfaces', '_get_source_interfaces'))
 
     @cachedmethod
     def _get_target_interfaces(self, context):
-        return ReadOnlyDict(get_template_interfaces(context, self, 'relationship template', 'target_interfaces', '_get_target_interfaces'))
+        return FrozenDict(get_template_interfaces(context, self, 'relationship template', 'target_interfaces', '_get_target_interfaces'))
 
     def _validate(self, context):
         super(RelationshipTemplate, self)._validate(context)
@@ -112,8 +109,6 @@ class RelationshipTemplate(Presentation):
 
 @has_fields
 @dsl_specification('node-templates', 'cloudify-1.0')
-@dsl_specification('node-templates', 'cloudify-1.1')
-@dsl_specification('node-templates', 'cloudify-1.2')
 class NodeTemplate(Presentation):
     """
     :code:`node_templates` represent the actual instances of node types which would eventually represent a running application/service as described in the blueprint.
@@ -178,11 +173,11 @@ class NodeTemplate(Presentation):
 
     @cachedmethod
     def _get_property_values(self, context):
-        return ReadOnlyDict(get_assigned_and_defined_property_values(context, self))
+        return FrozenDict(get_assigned_and_defined_property_values(context, self))
 
     @cachedmethod
     def _get_interfaces(self, context):
-        return ReadOnlyDict(get_template_interfaces(context, self, 'node template', 'interfaces', '_get_interfaces'))
+        return FrozenDict(get_template_interfaces(context, self, 'node template', 'interfaces', '_get_interfaces'))
 
     @cachedmethod
     def _get_scalable(self, context):
@@ -224,14 +219,6 @@ class GroupTemplate(Presentation):
 
 @has_fields
 class ServiceTemplate(Presentation):
-    @object_field(Description)
-    def description(self):
-        """
-        ARIA NOTE: Not mentioned in the spec.
-        
-        :rtype: :class:`Description`
-        """
-
     @primitive_field(str)
     @dsl_specification('versioning', 'cloudify-1.0')
     @dsl_specification('versioning', 'cloudify-1.1')
@@ -267,8 +254,6 @@ class ServiceTemplate(Presentation):
     @object_dict_field(PropertyDefinition)
     @dsl_specification('inputs', 'cloudify-1.0')
     @dsl_specification('inputs', 'cloudify-1.1')
-    @dsl_specification('inputs', 'cloudify-1.2')
-    @dsl_specification('inputs', 'cloudify-1.3')
     def inputs(self):
         """
         :code:`inputs` are parameters injected into the blueprint upon deployment creation. These parameters can be referenced by using the :code:`get_input` intrinsic function.
@@ -336,11 +321,11 @@ class ServiceTemplate(Presentation):
 
     @cachedmethod
     def _get_input_values(self, context):
-        return ReadOnlyDict(get_parameter_values(context, self, 'inputs'))
+        return FrozenDict(get_parameter_values(context, self, 'inputs'))
 
     @cachedmethod
     def _get_output_values(self, context):
-        return ReadOnlyDict(get_parameter_values(context, self, 'outputs'))
+        return FrozenDict(get_parameter_values(context, self, 'outputs'))
 
     def _validate(self, context):
         super(ServiceTemplate, self)._validate(context)
