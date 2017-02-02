@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 #
-# Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved.
+# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved.
 # 
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -25,7 +25,7 @@ if sys.version_info >= (3, 0):
     sys.exit('ARIA does not support Python 3')
 
 setup(
-    name='aria',
+    name='aria_openo',
     version='0.1',
     description='ARIA',
     license='Apache License Version 2.0',
@@ -50,47 +50,26 @@ setup(
         'Topic :: System :: Systems Administration'],
 
     packages=[
-        'aria',
-        'aria.consumption',
-        'aria.loading',
-        'aria.modeling',
-        'aria.presentation',
-        'aria.reading',
-        'aria.tools',
-        'aria.utils',
-        'aria.validation',
-        'aria_extension_tosca',
-        'aria_extension_tosca.simple_v1_0',
-        'aria_extension_tosca.simple_v1_0.modeling',
-        'aria_extension_tosca.simple_v1_0.presentation',
-        'aria_extension_tosca.simple_nfv_v1_0',
-        'aria_extension_open_o'],
+        'aria_rest',
+        'aria_openo'
+    ],
 
     package_dir={
-        'aria': 'src/aria/aria',
-        'aria_extension_tosca': 'src/tosca/aria_extension_tosca',
-        'aria_extension_open_o': 'src/open_o/aria_extension_open_o'},
-      
+        'aria_rest': 'src/aria_rest',
+        'aria_openo': 'src/aria_openo'
+    },
+
     package_data={
-        'aria.tools': [
-            'web/**'],
-        'aria_extension_tosca': [
-            'profiles/tosca-simple-1.0/**',
-            'profiles/tosca-simple-nfv-1.0/**'],
-        'aria_extension_open_o': [
-            'web/**']},
-    
-    scripts=[
-        'src/aria/scripts/aria',
-        'src/aria/scripts/aria-rest',
-        'src/open_o/scripts/open-o-common-tosca-parser-service'],
+        'aria_rest': ['swagger.yaml'],
+    },
+
+    entry_points={
+        'console_scripts': [
+            'aria-rest = aria_rest.__main__:main',
+            'aria-openo = aria_openo.__main__:main']
+    },
       
     # Please make sure this is in sync with src/aria/requirements.txt
-    install_requires=[
-        'ruamel.yaml==0.12.14',
-        'clint==0.5.1',
-        'Jinja2==2.8',
-        'requests==2.11.1',
-        'CacheControl[filecache]==0.11.6',
-        'shortuuid==0.4.3',
-        'python-daemon==2.1.1'])
+    install_requires=['aria==0.1.0',
+                      'connexion==1.1.4',
+                      'python_daemon==2.1.2'])

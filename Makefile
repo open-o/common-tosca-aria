@@ -15,19 +15,15 @@
 #
 
 SRC=src
-DOCS=docs
 
 ARIA_SRC=$(SRC)/aria
-TOSCA_SRC=$(SRC)/tosca
-CLOUDIFY_SRC=$(SRC)/cloudify
-SPHINX_SRC=$(SRC)/sphinx
 TESTS_SRC=$(SRC)/tests
 
-.PHONY: clean aria-requirements docs-requirements docs
+.PHONY: clean aria-requirements
 .DEFAULT_GOAL = test
 
 clean:
-	rm -rf "$(DOCS)" out .tox .coverage
+	rm -rf out .tox .coverage
 	find . -type d -name '*.egg-info' -exec rm -rf {} \;
 	find . -type d -name '.coverage' -exec rm -rf {} \;
 	find . -type f -name '.coverage' -delete
@@ -35,15 +31,8 @@ clean:
 requirements:
 	pip install --upgrade --requirement "$(ARIA_SRC)/requirements.txt"
 
-docs-requirements:
-	pip install --upgrade --requirement "$(SPHINX_SRC)/requirements.txt"
-
 test-requirements:
 	pip install --upgrade --requirement "$(TESTS_SRC)/requirements.txt"
 
-docs: docs-requirements requirements
-	rm -rf "$(DOCS)"
-	sphinx-build -b html "$(SPHINX_SRC)" "$(DOCS)"
-
 test: test-requirements requirements
-	PYTHONPATH="$(ARIA_SRC):$(TOSCA_SRC):$(CLOUDIFY_SRC):$(PYTHONPATH)" nosetests -v -s "$(TESTS_SRC)"
+	PYTHONPATH="$(ARIA_SRC):$(PYTHONPATH)" nosetests -v -s "$(TESTS_SRC)"

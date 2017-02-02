@@ -1,0 +1,251 @@
+swagger: '2.0'
+info:
+  version: 1.0.0
+  title: Aria REST API
+  description: 'Rest API for common-tosca-aria service'
+tags:
+  - name: 'parser'
+paths:
+  '/validate':
+    get:
+      tags:
+       - 'parser'
+      summary: 'Validate blueprint file using given path'
+      operationId: ParseController.validate_file
+      produces:
+        - application/json
+      parameters:
+        - name: path
+          in: query
+          description: Path to blueprint file
+          required: true
+          type: string
+      responses:
+        '200':
+          $ref: '#/responses/OkResponse'
+        '400':
+          $ref: '#/responses/BadRequestResponse'
+        '500':
+          $ref: '#/responses/InternalServerErrorResponse'
+    post:
+      tags:
+       - 'parser'
+      summary: 'Validate uploaded blueprint file'
+      operationId: ParseController.validate_upload
+      consumes:
+        - application/x-yaml
+      produces:
+        - application/json
+      parameters:
+        - name: inputs
+          in: query
+          description: Inputs for instance creation from blueprint
+          required: false
+          type: string
+        - name: upload_content
+          in: body
+          required: true
+          schema:
+            type: object
+      responses:
+        '200':
+          $ref: '#/responses/OkResponse'
+        '400':
+          $ref: '#/responses/BadRequestResponse'
+        '500':
+          $ref: '#/responses/InternalServerErrorResponse'
+  '/indirect/validate':
+    post:
+      tags:
+       - 'parser'
+      summary: 'Validate blueprint file using given URI'
+      operationId: ParseController.validate_indirect
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: indirect_data
+          description: Blueprint specification
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/IndirectData'
+      responses:
+        '200':
+          $ref: '#/responses/OkResponse'
+        '400':
+          $ref: '#/responses/BadRequestResponse'
+        '500':
+          $ref: '#/responses/InternalServerErrorResponse'
+  '/model':
+    get:
+      tags:
+       - 'parser'
+      summary: 'Create model from blueprint file using given path'
+      operationId: ParseController.model_file
+      produces:
+        - application/json
+      parameters:
+        - name: path
+          in: query
+          description: Path to blueprint file
+          required: true
+          type: string
+      responses:
+        '200':
+          $ref: '#/responses/OkResponse'
+        '400':
+          $ref: '#/responses/BadRequestResponse'
+        '500':
+          $ref: '#/responses/InternalServerErrorResponse'
+    post:
+      tags:
+       - 'parser'
+      summary: 'Create model from uploaded blueprint file'
+      operationId: ParseController.model_upload
+      consumes:
+        - application/x-yaml
+      produces:
+        - application/json
+      parameters:
+        - name: inputs
+          in: query
+          description: Inputs for instance creation from blueprint
+          required: false
+          type: string
+        - name: upload_content
+          in: body
+          required: true
+          schema:
+            type: object
+      responses:
+        '200':
+          $ref: '#/responses/OkResponse'
+        '400':
+          $ref: '#/responses/BadRequestResponse'
+        '500':
+          $ref: '#/responses/InternalServerErrorResponse'
+  '/indirect/model':
+    post:
+      tags:
+       - 'parser'
+      summary: 'Create model from blueprint specyfied by URI'
+      operationId: ParseController.model_indirect
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: indirect_data
+          description: Blueprint specification
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/IndirectData'
+      responses:
+        '200':
+          $ref: '#/responses/OkResponse'
+        '400':
+          $ref: '#/responses/BadRequestResponse'
+        '500':
+          $ref: '#/responses/InternalServerErrorResponse'
+  '/instance':
+    get:
+      tags:
+       - 'parser'
+      summary: 'Create instance from file using given path'
+      operationId: ParseController.instance_file
+      produces:
+        - application/json
+      parameters:
+        - name: path
+          in: query
+          description: Path to blueprint file
+          required: true
+          type: string
+        - name: inputs
+          in: query
+          description: Inputs for instance creation from blueprint
+          required: false
+          type: string
+      responses:
+        '200':
+          $ref: '#/responses/OkResponse'
+        '400':
+          $ref: '#/responses/BadRequestResponse'
+        '500':
+          $ref: '#/responses/InternalServerErrorResponse'
+    post:
+      tags:
+       - 'parser'
+      summary: 'Create instance from uploaded blueprint file'
+      operationId: ParseController.instance_upload
+      consumes:
+        - application/x-yaml
+      produces:
+        - application/json
+      parameters:
+        - name: inputs
+          in: query
+          description: Inputs for instance creation from blueprint
+          required: false
+          type: string
+        - name: upload_content
+          in: body
+          required: true
+          schema:
+            type: object
+      responses:
+        '200':
+          $ref: '#/responses/OkResponse'
+        '400':
+          $ref: '#/responses/BadRequestResponse'
+        '500':
+          $ref: '#/responses/InternalServerErrorResponse'
+  '/indirect/instance':
+    post:
+      tags:
+       - 'parser'
+      summary: 'Create instance from blueprint specyfied by URI'
+      operationId: ParseController.instance_indirect
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: indirect_data
+          description: Blueprint specification
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/IndirectData'
+      responses:
+        '200':
+          $ref: '#/responses/OkResponse'
+        '400':
+          $ref: '#/responses/BadRequestResponse'
+        '500':
+          $ref: '#/responses/InternalServerErrorResponse'
+definitions:
+  IndirectData:
+    type: object
+#TODO definition skipped, because according to accepted API definition 'inputs' could be either JSON object or URI
+#    properties:
+#      uri:
+#        type: string
+#      inputs:
+#        type: object
+responses:
+  OkResponse:
+    description: ok
+    schema:
+      type: object
+  BadRequestResponse:
+    description: bad request
+    schema:
+      type: string
+  InternalServerErrorResponse:
+    description: internal server error
+    schema:
+      type: string
