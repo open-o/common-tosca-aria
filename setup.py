@@ -72,4 +72,4 @@ setup(
     # Please make sure this is in sync with src/aria/requirements.txt
     install_requires=['aria==0.1.0',
                       'connexion==1.1.4',
-                      'python_daemon==2.1.2'])
+                      'python_daemon==2.1.1'])
