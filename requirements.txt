@@ -1,3 +1,4 @@
-https://github.com/apache/incubator-ariatosca/archive/ARIA-98-update-dependencies-versions.zip
+https://codeload.github.com/apache/incubator-ariatosca/zip/e282f23f6dcffb5adc30af8b525fc7f097bb4f4e
 connexion==1.1.4
 python_daemon==2.1.1
+
